@@ -14,6 +14,7 @@ func updateCmd() *cobra.Command {
 		Use:     "update",
 		Short:   "mder auto update",
 		Example: "mder update",
+		Aliases: []string{"u"},
 		Run: func(cmd *cobra.Command, args []string) {
 			commit, err := GetRepoLatestCommit()
 			if err != nil {

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"math"
 	"os"
@@ -17,6 +16,8 @@ import (
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 	"go.abhg.dev/goldmark/toc"
+
+	"gitter.top/mder/mder/internal"
 )
 
 func generateCmd() *cobra.Command {
@@ -39,10 +40,12 @@ func generateCmd() *cobra.Command {
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			// 读取资源文件
-			if err := outter.readDataSource(); err != nil {
-				logger.Errorf("read data source failed: %v", err)
+			dataSource, err := internal.GetDataSource(BaseDir)
+			if err != nil {
+				logger.Fatalf("get data source failed: %v", err)
 				return
 			}
+			outter.DataSource = dataSource
 			// 读取主题模板文件
 			if err := outter.readTheme(outter.Config.Site.Theme); err != nil {
 				logger.Errorf("read theme source failed: %v", err)
@@ -63,7 +66,7 @@ func generateCmd() *cobra.Command {
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			endAt := time.Since(startAt)
-			logger.Infof("generate used: %s", endAt.String())
+			logger.Infof("generate cost: %s", endAt.String())
 		},
 	}
 	cmd.Flags().StringVar(&path, "path", ".", "mder project path")
@@ -293,14 +296,14 @@ func (o *Outter) readTheme(themeName string) (err error) {
 }
 
 type Outter struct {
-	SourceVersion string                 // 资源号 防缓存
-	Config        *Config                // 全局配置
-	SourceData    map[string]interface{} // 记录source/data下的所有文件
-	Posts         []*Post                // 记录文章
-	DraftPosts    []*Post                // 不宜发布的草稿文章
-	Pages         []*Page                // 记录页面
-	Theme         *Theme                 // 记录主题模板文件
-	Now           time.Time              // 当前时间
+	SourceVersion string              // 资源号 防缓存
+	Config        *Config             // 全局配置
+	DataSource    internal.DataSource // 记录source/data下的所有文件
+	Posts         []*Post             // 记录文章
+	DraftPosts    []*Post             // 不宜发布的草稿文章
+	Pages         []*Page             // 记录页面
+	Theme         *Theme              // 记录主题模板文件
+	Now           time.Time           // 当前时间
 }
 
 type Theme struct {
@@ -350,38 +353,6 @@ func (o *Outter) loadConfig() error {
 		o.Config = new(Config)
 	}
 	return o.Config.load()
-}
-
-// readDataSource 读取资源文件
-func (o *Outter) readDataSource() error {
-	o.SourceData = make(map[string]interface{})
-	var dataDir = BaseDir + "/data"
-	dirs, err := os.ReadDir(dataDir)
-	if err != nil {
-		return nil
-	}
-	for _, dir := range dirs {
-		if dir.IsDir() {
-			continue
-		}
-		// 不是json文件
-		if !strings.HasSuffix(dir.Name(), ".json") {
-			continue
-		}
-		var body []byte
-		body, err = os.ReadFile(fmt.Sprintf("%s/%s", dataDir, dir.Name()))
-		if err != nil {
-			logger.Errorf("read data source file failed: %v", err)
-			return err
-		}
-		var obj interface{}
-		if err := json.Unmarshal(body, &obj); err != nil {
-			logger.Errorf("unmarshal data source file failed: %v", err)
-			return err
-		}
-		o.SourceData[strings.ReplaceAll(dir.Name(), ".json", "")] = obj
-	}
-	return nil
 }
 
 // generate 文件生成
@@ -916,12 +887,8 @@ var funcMap = template.FuncMap{
 	"sum":       sum,
 }
 
-func getSource(data interface{}, key string) interface{} {
-	source, ok := data.(map[string]interface{})
-	if !ok {
-		return nil
-	}
-	return source[key]
+func getSource(data internal.DataSource, key string) []*internal.DataItem {
+	return data[key]
 }
 
 func add(a, b int) int {

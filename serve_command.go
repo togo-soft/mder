@@ -11,8 +11,9 @@ import (
 
 func serveCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "serve",
-		Short: "run a serve locally",
+		Use:     "serve",
+		Short:   "run a serve locally",
+		Aliases: []string{"s"},
 		Run: func(cmd *cobra.Command, args []string) {
 			w := watcher.New()
 			w.SetMaxEvents(1)
@@ -73,9 +74,9 @@ func serveCmd() *cobra.Command {
 				logger.Errorf("generate website failed: %v", err)
 				return
 			}
-			// 五秒一次
+			// 3秒一次
 			logger.Info("http://127.0.0.1:8666")
-			if err := w.Start(time.Second * 5); err != nil {
+			if err := w.Start(time.Second * 3); err != nil {
 				logger.Errorf("watch file failed: %v", err)
 				return
 			}
