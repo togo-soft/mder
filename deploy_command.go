@@ -1,9 +1,8 @@
 package main
 
 import (
-	"strings"
-
 	"github.com/spf13/cobra"
+	"strings"
 )
 
 func deployCmd() *cobra.Command {
@@ -30,7 +29,7 @@ func deployCmd() *cobra.Command {
 						return
 					}
 				}
-			case GitDeploy:
+			case GitHubDeploy:
 			}
 
 			// generate source
@@ -52,7 +51,9 @@ func deployCmd() *cobra.Command {
 					return
 				}
 				logger.Infof("deploy to upyun success")
+			case GitHubDeploy:
 			}
+
 		},
 	}
 	cmd.Flags().StringVar(&path, "path", ".", "mder project path")

@@ -103,8 +103,8 @@ func (c *Config) load() error {
 type DeployType string
 
 const (
-	GitDeploy   DeployType = "git"
-	UpyunDeploy DeployType = "upyun"
+	GitHubDeploy DeployType = "github"
+	UpyunDeploy  DeployType = "upyun"
 )
 
 type Deploy struct {
