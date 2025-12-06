@@ -90,11 +90,11 @@ func (c *Config) load() error {
 	}
 	configBuffer, err := os.ReadFile(file)
 	if err != nil {
-		logger.Errorf("read config file failed: %v", err)
+		logger.Error("read config file failed", "reason", err)
 		return err
 	}
 	if err := yaml.Unmarshal(configBuffer, c); err != nil {
-		logger.Errorf("read config file failed: %v", err)
+		logger.Error("read config file failed", "reason", err)
 		return err
 	}
 	return nil

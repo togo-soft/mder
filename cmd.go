@@ -40,6 +40,6 @@ func init() {
 func main() {
 	err := rootCmd.Execute()
 	if err != nil {
-		logger.Fatal(err)
+		logger.Error("execute command failed", "reason", err)
 	}
 }

@@ -28,37 +28,39 @@ func generateCmd() *cobra.Command {
 		Use:     "generate",
 		Aliases: []string{"g"},
 		Short:   "generate project to dist folder",
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if path != "" {
 				BaseDir = strings.TrimSuffix(path, "/")
 			}
 			startAt = time.Now()
 			// 读取配置文件
 			if err := outter.loadConfig(); err != nil {
-				logger.Fatalf("load config file failed: %v", err)
+				logger.Error("load config file failed", "reason", err)
+				return err
 			}
+			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			// 读取资源文件
 			dataSource, err := internal.GetDataSource(BaseDir)
 			if err != nil {
-				logger.Fatalf("get data source failed: %v", err)
+				logger.Error("get data source failed", "reason", err)
 				return
 			}
 			outter.DataSource = dataSource
 			// 读取主题模板文件
 			if err := outter.readTheme(outter.Config.Site.Theme); err != nil {
-				logger.Errorf("read theme source failed: %v", err)
+				logger.Error("read theme source failed", "reason", err)
 				return
 			}
 			// 读取页面列表
 			if err := outter.readAllPages(); err != nil {
-				logger.Errorf("read page source failed: %v", err)
+				logger.Error("read page source failed", "reason", err)
 				return
 			}
 			// 读取文章列表
 			if err := outter.readAllPosts(); err != nil {
-				logger.Errorf("read post source failed: %v", err)
+				logger.Error("read post source failed", "reason", err)
 				return
 			}
 			// 数据写入模板文件
@@ -66,7 +68,7 @@ func generateCmd() *cobra.Command {
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			endAt := time.Since(startAt)
-			logger.Infof("generate cost: %s", endAt.String())
+			logger.Info("generate success", "cost", endAt.String())
 		},
 	}
 	cmd.Flags().StringVar(&path, "path", ".", "mder project path")
@@ -78,14 +80,14 @@ func (o *Outter) readAllPosts() error {
 	var postDir = BaseDir + "/posts"
 	dirs, err := os.ReadDir(postDir)
 	if err != nil {
-		logger.Errorf("read directory failed: %v", err)
+		logger.Error("read directory failed", "reason", err)
 		return err
 	}
 	for _, info := range dirs {
 		// 获取文件信息
 		fsInfo, err := info.Info()
 		if err != nil {
-			logger.Errorf("read file info failed: %v", err)
+			logger.Error("read file info failed", "reason", err)
 			continue
 		}
 		// 不是目录 没有分类
@@ -98,7 +100,7 @@ func (o *Outter) readAllPosts() error {
 		}
 		post, err := o.readPost(fmt.Sprintf("%s/%s", postDir, info.Name()))
 		if err != nil {
-			logger.Errorf("read post file failed: %v", err)
+			logger.Error("read post file failed", "reason", err)
 			continue
 		}
 		post.UpdatedAtFormat = fsInfo.ModTime().Format(time.DateOnly)
@@ -122,7 +124,7 @@ func (o *Outter) readPost(fp string) (*Post, error) {
 	var post = new(Post)
 	content, err := os.ReadFile(fp)
 	if err != nil {
-		logger.Errorf("read file %s failed: %v", fp, err)
+		logger.Error("read file failed", "file", fp, "reason", err)
 		return nil, err
 	}
 	var buf bytes.Buffer
@@ -131,28 +133,28 @@ func (o *Outter) readPost(fp string) (*Post, error) {
 
 	tocTree, err := toc.Inspect(doc, content)
 	if err != nil {
-		logger.Errorf("read content toc tree failed: %v", err)
+		logger.Error("read content toc tree failed", "reason", err)
 		return nil, err
 	}
 
 	list := toc.RenderList(tocTree)
 	if list != nil {
 		if err := markdown.Renderer().Render(&buf, content, list); err != nil {
-			logger.Errorf("render toc content failed: %v", err)
+			logger.Error("render toc content failed", "reason", err)
 			return nil, err
 		}
 		post.TOC = buf.String()
 		buf.Reset()
 	}
 	if err := markdown.Renderer().Render(&buf, content, doc); err != nil {
-		logger.Errorf("render content failed: %v", err)
+		logger.Error("render content failed", "reason", err)
 		return nil, err
 	}
 
 	metaData := meta.Get(parserContext)
 	post.CreatedAt, err = datetimeStringToTime(mustString(metaData["date"]))
 	if err != nil {
-		logger.Errorf("get post %s created_at time failed, please check file content", post.FileBasename)
+		logger.Error("get post created_at time failed, please check file content", "name", post.FileBasename)
 		return nil, err
 	}
 	post.CreatedAtFormat = post.CreatedAt.Format("2006-01-02")
@@ -167,13 +169,13 @@ func (o *Outter) readPage(fp string) (*Page, error) {
 	var page = new(Page)
 	content, err := os.ReadFile(fp)
 	if err != nil {
-		logger.Errorf("read page file failed: %v", err)
+		logger.Error("read page file failed", "reason", err)
 		return nil, err
 	}
 	var buf bytes.Buffer
 	context := parser.NewContext()
 	if err := markdown.Convert(content, &buf, parser.WithContext(context)); err != nil {
-		logger.Errorf("render content failed: %v", err)
+		logger.Error("render content failed", "reason", err)
 		return nil, err
 	}
 	metaData := meta.Get(context)
@@ -186,7 +188,7 @@ func (o *Outter) readPosts(base, category string) []*Post {
 	var dir = fmt.Sprintf("%s/%s", base, category)
 	dirs, err := os.ReadDir(dir)
 	if err != nil {
-		logger.Errorf("read directory failed: %v", err)
+		logger.Error("read directory failed", "reason", err)
 		return nil
 	}
 	var posts []*Post
@@ -200,12 +202,12 @@ func (o *Outter) readPosts(base, category string) []*Post {
 		// 获取文件信息
 		fsInfo, err := info.Info()
 		if err != nil {
-			logger.Errorf("read file info failed: %v", err)
+			logger.Error("read file info failed", "reason", err)
 			return nil
 		}
 		post, err := o.readPost(fmt.Sprintf("%s/%s", dir, info.Name()))
 		if err != nil {
-			logger.Errorf("read post failed: %v", err)
+			logger.Error("read post failed", "reason", err)
 			continue
 		}
 		post.UpdatedAtFormat = fsInfo.ModTime().Format(time.DateOnly)
@@ -226,7 +228,7 @@ func (o *Outter) readAllPages() error {
 	var dir = BaseDir + "/pages"
 	dirs, err := os.ReadDir(dir)
 	if err != nil {
-		logger.Errorf("read directory failed: %v", err)
+		logger.Error("read directory failed", "reason", err)
 		return err
 	}
 	for _, info := range dirs {
@@ -238,7 +240,7 @@ func (o *Outter) readAllPages() error {
 		}
 		page, err := o.readPage(fmt.Sprintf("%s/%s", dir, info.Name()))
 		if err != nil {
-			logger.Errorf("read page file failed: %v", err)
+			logger.Error("read page file failed", "reason", err)
 			continue
 		}
 		page.Link = strings.ReplaceAll(info.Name(), ".md", "")
@@ -252,37 +254,37 @@ func (o *Outter) readTheme(themeName string) (err error) {
 	var dir = fmt.Sprintf("%s/themes/%s", BaseDir, themeName)
 	o.Theme.BaseLayout, err = os.ReadFile(fmt.Sprintf("%s/base.html", dir))
 	if err != nil {
-		logger.Errorf("read base.html theme file failed: %v", err)
+		logger.Error("read base.html theme file failed", "reason", err)
 		return err
 	}
 	o.Theme.IndexLayout, err = os.ReadFile(fmt.Sprintf("%s/index.html", dir))
 	if err != nil {
-		logger.Errorf("read index.html theme file failed: %v", err)
+		logger.Error("read index.html theme file failed", "reason", err)
 		return err
 	}
 	o.Theme.PageLayout, err = os.ReadFile(fmt.Sprintf("%s/page.html", dir))
 	if err != nil {
-		logger.Errorf("read page.html theme file failed: %v", err)
+		logger.Error("read page.html theme file failed", "reason", err)
 		return err
 	}
 	o.Theme.PostLayout, err = os.ReadFile(fmt.Sprintf("%s/post.html", dir))
 	if err != nil {
-		logger.Errorf("read pose.html theme file failed: %v", err)
+		logger.Error("read pose.html theme file failed", "reason", err)
 		return err
 	}
 	o.Theme.ArchiveLayout, err = os.ReadFile(fmt.Sprintf("%s/archive.html", dir))
 	if err != nil {
-		logger.Errorf("read archive.html theme file failed: %v", err)
+		logger.Error("read archive.html theme file failed", "reason", err)
 		return err
 	}
 	o.Theme.TagLayout, err = os.ReadFile(fmt.Sprintf("%s/tag.html", dir))
 	if err != nil {
-		logger.Errorf("read tag.html theme file failed: %v", err)
+		logger.Error("read tag.html theme file failed", "reason", err)
 		return err
 	}
 	o.Theme.CategoryLayout, err = os.ReadFile(fmt.Sprintf("%s/category.html", dir))
 	if err != nil {
-		logger.Errorf("read category.html theme file failed: %v", err)
+		logger.Error("read category.html theme file failed", "reason", err)
 		return err
 	}
 
@@ -359,11 +361,11 @@ func (o *Outter) loadConfig() error {
 func (o *Outter) generate() {
 	// 清理dist目录
 	if err := o.clearDistDirectory(); err != nil {
-		logger.Errorf("clear dist directory failed: %v", err)
+		logger.Error("clear dist directory failed", "reason", err)
 		return
 	}
 	if err := o.sourceCopy(); err != nil {
-		logger.Errorf("copy theme source to dist failed: %v", err)
+		logger.Error("copy theme source to dist failed", "reason", err)
 		return
 	}
 	_ = o.generateIndex()
@@ -378,12 +380,12 @@ func (o *Outter) generate() {
 // clearDistDirectory 清理dist目录
 func (o *Outter) clearDistDirectory() error {
 	if err := os.RemoveAll(BaseDir + "/dist"); err != nil {
-		logger.Errorf("remove old dist directory failed: %v", err)
+		logger.Error("remove old dist directory failed", "reason", err)
 		return err
 	}
 
 	if err := mkdir(BaseDir + "/dist"); err != nil {
-		logger.Errorf("create dist directory failed: %v", err)
+		logger.Error("create dist directory failed", "reason", err)
 		return err
 	}
 	return nil
@@ -398,31 +400,31 @@ func (o *Outter) sourceCopy() error {
 	jsDir := fmt.Sprintf("%s/js", destPath)
 	imagesDir := fmt.Sprintf("%s/images", destPath)
 	if err := mkdir(cssDir); err != nil {
-		logger.Errorf("mkdir css directory failed: %v", err)
+		logger.Error("mkdir css directory failed", "reason", err)
 		return err
 	}
 	if err := mkdir(jsDir); err != nil {
-		logger.Errorf("mkdir js directory failed: %v", err)
+		logger.Error("mkdir js directory failed", "reason", err)
 	}
 	if err := mkdir(imagesDir); err != nil {
-		logger.Errorf("mkdir images directory failed: %v", err)
+		logger.Error("mkdir images directory failed", "reason", err)
 	}
 	cmd := exec.Command("cp", "-r", sourcePath+"css", destPath)
 	if err := cmd.Run(); err != nil {
-		logger.Infof(cmd.String())
-		logger.Errorf("copy theme css source failed: %v", err)
+		logger.Info(cmd.String())
+		logger.Error("copy theme css source failed", "reason", err)
 		return err
 	}
 	cmd = exec.Command("cp", "-r", sourcePath+"js", destPath)
 	if err := cmd.Run(); err != nil {
-		logger.Infof(cmd.String())
-		logger.Errorf("copy theme js source failed: %v", err)
+		logger.Info(cmd.String())
+		logger.Error("copy theme js source failed", "reason", err)
 		return err
 	}
 	cmd = exec.Command("cp", "-r", sourcePath+"images", destPath)
 	if err := cmd.Run(); err != nil {
-		logger.Infof(cmd.String())
-		logger.Errorf("copy theme images source failed: %v", err)
+		logger.Info(cmd.String())
+		logger.Error("copy theme images source failed", "reason", err)
 		return err
 	}
 	return nil
@@ -440,7 +442,7 @@ func (o *Outter) generateIndex() error {
 
 	indexTemplate, err := indexTemplate.Parse(string(o.Theme.IndexLayout))
 	if err != nil {
-		logger.Errorf("parse index layout failed: %v", err)
+		logger.Error("parse index layout failed", "reason", err)
 		return err
 	}
 
@@ -451,21 +453,21 @@ func (o *Outter) generateIndex() error {
 	if !o.Config.PageConfig.Paginate {
 		err = indexTemplate.Execute(&buffer, o)
 		if err != nil {
-			logger.Errorf("generate index page failed: %v", err)
+			logger.Error("generate index page failed", "reason", err)
 			return err
 		}
 		var filename = BaseDir + "/dist/index.html"
 		if err := os.WriteFile(filename, buffer.Bytes(), os.ModePerm); err != nil {
-			logger.Errorf("write index file failed: %v", err)
+			logger.Error("write index file failed", "reason", err)
 			return err
 		}
-		logger.Infof("index generate success...")
+		logger.Info("index generate success")
 		return nil
 	}
 
 	// 分页数据不规范
 	if o.Config.PageConfig.Size < 1 {
-		logger.Errorf("page size must > 1")
+		logger.Error("page size must > 1")
 		return err
 	}
 
@@ -485,7 +487,7 @@ func (o *Outter) generateIndex() error {
 
 		err = indexTemplate.Execute(&buffer, o)
 		if err != nil {
-			logger.Errorf("generate index page failed: %v", err)
+			logger.Error("generate index page failed", "reason", err)
 			return err
 		}
 		// 第一页 主页
@@ -493,18 +495,18 @@ func (o *Outter) generateIndex() error {
 			// 第一次的时候创建目录
 			dir := BaseDir + "/dist/page"
 			if err := o.createDir(dir); err != nil {
-				logger.Errorf("create index page failed: %v", err)
+				logger.Error("create index page failed", "reason", err)
 				return err
 			}
 			var filename = BaseDir + "/dist/index.html"
 			if err := os.WriteFile(filename, buffer.Bytes(), os.ModePerm); err != nil {
-				logger.Errorf("write index file failed: %v", err)
+				logger.Error("write index file failed", "reason", err)
 				return err
 			}
 		}
 		fPage := fmt.Sprintf(BaseDir+"/dist/page/%d.html", i+1)
 		if err := os.WriteFile(fPage, buffer.Bytes(), os.ModePerm); err != nil {
-			logger.Errorf("write index file failed: %v", err)
+			logger.Error("write index file failed", "reason", err)
 			return err
 		}
 		buffer.Reset()
@@ -532,25 +534,25 @@ func (o *Outter) generatePost() {
 		postTemplate.Funcs(funcMap)
 		postTemplate, err := postTemplate.Parse(string(o.Theme.PostLayout))
 		if err != nil {
-			logger.Errorf("generate post page failed: %v", err)
+			logger.Error("generate post page failed", "reason", err)
 			return
 		}
 		// 入buffer
 		if err := postTemplate.Execute(postBuffer, instance); err != nil {
-			logger.Errorf("generate post page failed: %v", err)
+			logger.Error("generate post page failed", "reason", err)
 			return
 		}
 		// buffer写文件
 		var catDir = fmt.Sprintf(BaseDir+"/dist/%s", post.Category)
 		if !isExist(catDir) {
 			if err := mkdir(catDir); err != nil {
-				logger.Errorf("create directory failed: %v", err)
+				logger.Error("create directory failed", "reason", err)
 				return
 			}
 		}
 		var filename = fmt.Sprintf("%s/%s.html", catDir, post.FileBasename)
 		if err := os.WriteFile(filename, postBuffer.Bytes(), os.ModePerm); err != nil {
-			logger.Errorf("write file failed: %v", err)
+			logger.Error("write file failed", "reason", err)
 			return
 		}
 		postBuffer.Reset()
@@ -575,25 +577,25 @@ func (o *Outter) generateDraftPost() {
 		postTemplate.Funcs(funcMap)
 		postTemplate, err := postTemplate.Parse(string(o.Theme.PostLayout))
 		if err != nil {
-			logger.Errorf("generate post page failed: %v", err)
+			logger.Error("generate post page failed", "reason", err)
 			return
 		}
 		// 入buffer
 		if err := postTemplate.Execute(postBuffer, instance); err != nil {
-			logger.Errorf("generate post page failed: %v", err)
+			logger.Error("generate post page failed", "reason", err)
 			return
 		}
 		// buffer写文件
 		var catDir = BaseDir + "/dist/draft"
 		if !isExist(catDir) {
 			if err := mkdir(catDir); err != nil {
-				logger.Errorf("create directory failed: %v", err)
+				logger.Error("create directory failed", "reason", err)
 				return
 			}
 		}
 		var filename = fmt.Sprintf("%s/%s.html", catDir, post.FileBasename)
 		if err := os.WriteFile(filename, postBuffer.Bytes(), os.ModePerm); err != nil {
-			logger.Errorf("write file failed: %v", err)
+			logger.Error("write file failed", "reason", err)
 			return
 		}
 		postBuffer.Reset()
@@ -618,18 +620,18 @@ func (o *Outter) generatePage() {
 		pageTemplate.Funcs(funcMap)
 		pageTemplate, err := pageTemplate.Parse(string(o.Theme.PageLayout))
 		if err != nil {
-			logger.Errorf("generate page page failed: %v", err)
+			logger.Error("generate page page failed", "reason", err)
 			return
 		}
 		// 入buffer
 		if err := pageTemplate.Execute(pageBuffer, instance); err != nil {
-			logger.Errorf("generate page page failed: %v", err)
+			logger.Error("generate page page failed", "reason", err)
 			return
 		}
 		// buffer写文件
 		var filename = fmt.Sprintf(BaseDir+"/dist/%s.html", page.Link)
 		if err := os.WriteFile(filename, pageBuffer.Bytes(), os.ModePerm); err != nil {
-			logger.Errorf("write page content failed: %v", err)
+			logger.Error("write page content failed", "reason", err)
 			return
 		}
 		pageBuffer.Reset()
@@ -677,19 +679,19 @@ func (o *Outter) generateArchives() {
 	archiveTemplate.Funcs(funcMap)
 	archiveTemplate, err := archiveTemplate.Parse(string(o.Theme.ArchiveLayout))
 	if err != nil {
-		logger.Errorf("generate archive page failed: %v", err)
+		logger.Error("generate archive page failed", "reason", err)
 		return
 	}
 
 	// 入buffer
 	if err := archiveTemplate.Execute(archiveBuffer, instance); err != nil {
-		logger.Errorf("generate archive page failed: %v", err)
+		logger.Error("generate archive page failed", "reason", err)
 		return
 	}
 	// buffer写文件
 	var filename = fmt.Sprintf(BaseDir+"/dist/%s.html", instance.Page.Link)
 	if err := os.WriteFile(filename, archiveBuffer.Bytes(), os.ModePerm); err != nil {
-		logger.Errorf("write archive page failed: %v", err)
+		logger.Error("write archive page failed", "reason", err)
 		return
 	}
 	archiveBuffer.Reset()
@@ -748,27 +750,27 @@ func (o *Outter) generateTags() {
 		tagsTemplate.Funcs(funcMap)
 		tagsTemplate, err := tagsTemplate.Parse(string(o.Theme.TagLayout))
 		if err != nil {
-			logger.Errorf("generate tags page failed: %v", err)
+			logger.Error("generate tags page failed", "reason", err)
 			return
 		}
 
 		// 入buffer
 		if err := tagsTemplate.Execute(tagsBuffer, instance); err != nil {
-			logger.Errorf("generate tags page failed: %v", err)
+			logger.Error("generate tags page failed", "reason", err)
 			return
 		}
 		// 创建tag文件夹
 		var tagDir = BaseDir + "/dist/tags"
 		if !isExist(tagDir) {
 			if err := mkdir(tagDir); err != nil {
-				logger.Errorf("create tag directory failed: %v", err)
+				logger.Error("create tag directory failed", "reason", err)
 				return
 			}
 		}
 		// buffer写文件
 		var filename = fmt.Sprintf("%s/%s.html", tagDir, instance.Page.Link)
 		if err := os.WriteFile(filename, tagsBuffer.Bytes(), os.ModePerm); err != nil {
-			logger.Errorf("write tag content failed: %v", err)
+			logger.Error("write tag content failed", "reason", err)
 			return
 		}
 		tagsBuffer.Reset()
@@ -826,27 +828,27 @@ func (o *Outter) generateCategories() {
 		tagsTemplate.Funcs(funcMap)
 		tagsTemplate, err := tagsTemplate.Parse(string(o.Theme.TagLayout))
 		if err != nil {
-			logger.Errorf("generate tags page failed: %v", err)
+			logger.Error("generate tags page failed", "reason", err)
 			return
 		}
 
 		// 入buffer
 		if err := tagsTemplate.Execute(tagsBuffer, instance); err != nil {
-			logger.Errorf("generate tags page failed: %v", err)
+			logger.Error("generate tags page failed", "reason", err)
 			return
 		}
 		// 创建tag文件夹
 		var tagDir = BaseDir + "/dist/category"
 		if !isExist(tagDir) {
 			if err := mkdir(tagDir); err != nil {
-				logger.Errorf("create tag directory failed: %v", err)
+				logger.Error("create tag directory failed", "reason", err)
 				return
 			}
 		}
 		// buffer写文件
 		var filename = fmt.Sprintf("%s/%s.html", tagDir, instance.Page.Link)
 		if err := os.WriteFile(filename, tagsBuffer.Bytes(), os.ModePerm); err != nil {
-			logger.Errorf("write tag content failed: %v", err)
+			logger.Error("write tag content failed", "reason", err)
 			return
 		}
 		tagsBuffer.Reset()
@@ -874,7 +876,7 @@ type PostData struct {
 func (o *Outter) createDir(fp string) error {
 	if !isExist(fp) {
 		if err := mkdir(fp); err != nil {
-			logger.Errorf("create %s directory failed: %v", fp, err)
+			logger.Error("create directory failed", "dir", fp, "reason", err)
 			return err
 		}
 	}

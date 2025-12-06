@@ -1,36 +1,29 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
-	"strings"
+	"log/slog"
+	"os"
 
-	"github.com/sirupsen/logrus"
+	"github.com/golang-cz/devslog"
 )
 
-var logger = logrus.New()
+var logger *slog.Logger
 
 func init() {
-	logger.SetReportCaller(true)
-	logger.SetFormatter(&EasyFormatter{})
-}
-
-type EasyFormatter struct{}
-
-func (receiver *EasyFormatter) Format(entry *logrus.Entry) ([]byte, error) {
-	var output bytes.Buffer
-	output.WriteString(entry.Level.String()[:4])
-	output.WriteString("|")
-	var filenames = strings.Split(entry.Caller.File, "/")
-	filename := filenames[len(filenames)-1]
-	output.WriteString(fmt.Sprintf("%s:%d", filename, entry.Caller.Line))
-	output.WriteString("|")
-	output.WriteString(entry.Caller.Function)
-	output.WriteString("|")
-	for k, val := range entry.Data {
-		output.WriteString(fmt.Sprintf("%s=%v|", k, val))
+	slogOpts := &slog.HandlerOptions{
+		AddSource: true,
+		Level:     slog.LevelDebug,
 	}
-	output.WriteString(" " + entry.Message)
-	output.WriteRune('\n')
-	return output.Bytes(), nil
+	opts := &devslog.Options{
+		HandlerOptions:    slogOpts,
+		MaxSlicePrintSize: 4,
+		SortKeys:          true,
+		TimeFormat:        "[04:05]",
+		NewLineAfterLog:   true,
+		DebugColor:        devslog.Magenta,
+		StringerFormatter: true,
+	}
+
+	logger = slog.New(devslog.NewHandler(os.Stdout, opts))
+	slog.SetDefault(logger)
 }

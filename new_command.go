@@ -23,7 +23,7 @@ func newCmd() *cobra.Command {
 }
 
 func newPostCmd() *cobra.Command {
-	var name string
+	var name, catalog string
 	cmd := &cobra.Command{
 		Use:   "post",
 		Short: "new a post",
@@ -39,28 +39,33 @@ func newPostCmd() *cobra.Command {
 				name = name + ".md"
 			}
 			filename := fmt.Sprintf("posts/%s", name)
+			if catalog != "" {
+				_name := strings.ReplaceAll(name, "/", "-")
+				filename = fmt.Sprintf("posts/%s/%s", catalog, _name)
+			}
 			// 检测文件夹是否存在
 			dir := filepath.Dir(filename)
 			if !isExist(dir) {
 				if err := mkdir(dir); err != nil {
-					logger.Errorf("make directory failed: %v", err)
+					logger.Error("make directory failed", "reason", err)
 					return
 				}
 			}
 			f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, os.ModePerm)
 			if err != nil {
-				logger.Errorf("create file failed: %v", err)
+				logger.Error("create file failed", "reason", err)
 				return
 			}
 			defer f.Close()
-			var data = fmt.Sprintf("---\ntitle: %s\ndate: %s\ncatagories:\ntags:\n---", pureName, time.Now().Format("2006-01-02 15:04:05"))
+			var data = fmt.Sprintf("---\ntitle: %s\ndate: %s\ncatagories: %s\ntags:\n---", pureName, time.Now().Format("2006-01-02 15:04:05"), catalog)
 			if _, err := f.Write([]byte(data)); err != nil {
-				logger.Errorf("create file failed: %v", err)
+				logger.Error("create file failed", "reason", err)
 				return
 			}
 		},
 	}
-	cmd.Flags().StringVar(&name, "name", "uname.md", "Name of the post file to create")
+	cmd.Flags().StringVarP(&name, "name", "n", "uname.md", "Name of the post file to create")
+	cmd.Flags().StringVarP(&catalog, "catalog", "c", "develop", "Catalog of the post file to create")
 	return cmd
 }
 
@@ -82,19 +87,19 @@ func newPageCmd() *cobra.Command {
 			dir := filepath.Dir(filename)
 			if !isExist(dir) {
 				if err := mkdir(dir); err != nil {
-					logger.Errorf("make directory failed: %v", err)
+					logger.Error("make directory failed", "reason", err)
 					return
 				}
 			}
 			f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, os.ModePerm)
 			if err != nil {
-				logger.Errorf("create file failed: %v", err)
+				logger.Error("create file failed", "reason", err)
 				return
 			}
 			defer f.Close()
 			var data = fmt.Sprintf("---\ntitle: %s\ndate: %s\n---", pureName, time.Now().Format("2006-01-02 15:04:05"))
 			if _, err := f.Write([]byte(data)); err != nil {
-				logger.Errorf("create file failed: %v", err)
+				logger.Error("create file failed", "reason", err)
 				return
 			}
 		},

@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/spf13/cobra"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
 func deployCmd() *cobra.Command {
@@ -12,21 +13,22 @@ func deployCmd() *cobra.Command {
 		Use:     "deploy",
 		Aliases: []string{"d"},
 		Short:   "deploy project to upyun",
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if path != "" {
 				BaseDir = strings.TrimSuffix(path, "/")
 			}
 
 			if err := outter.loadConfig(); err != nil {
-				logger.Fatalf("load config failed: %v", err)
+				logger.Error("load config failed", "reason", err)
+				return err
 			}
 			config := outter.Config.Deploy
 			switch config.Type {
 			case UpyunDeploy:
 				if !isCommandExist("upx") {
 					if err := goInstall("github.com/upyun/upx/cmd/upx"); err != nil {
-						logger.Errorf("install upx failed: %+v", err)
-						return
+						logger.Error("install upx failed", "reason", err)
+						return err
 					}
 				}
 			case GitHubDeploy:
@@ -34,23 +36,25 @@ func deployCmd() *cobra.Command {
 
 			// generate source
 			if err := generateCmd().Execute(); err != nil {
-				logger.Errorf("generate project failed: %v", err)
-				return
+				logger.Error("generate project failed", "reason", err)
+				return err
 			}
+
+			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			config := outter.Config.Deploy
 			switch config.Type {
 			case UpyunDeploy:
 				if config.UpyunAuth == "" {
-					logger.Errorf("please config upyun auth string: upx auth [bucket] [operator] [password]")
+					logger.Error("please config upyun auth string: upx auth [bucket] [operator] [password]")
 					return
 				}
 				if err := uploadToUpyun(config.UpyunAuth, path); err != nil {
-					logger.Errorf("upload dist to upyun failed: %v", err)
+					logger.Error("upload dist to upyun failed", "reason", err)
 					return
 				}
-				logger.Infof("deploy to upyun success")
+				logger.Info("deploy to upyun success")
 			case GitHubDeploy:
 			}
 

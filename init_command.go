@@ -14,7 +14,7 @@ func initCmd() *cobra.Command {
 		Short: "create a new mder folder",
 		Run: func(cmd *cobra.Command, args []string) {
 			if name == "" && len(args) == 0 {
-				logger.Errorf("folder name empty")
+				logger.Error("folder name empty")
 				return
 			}
 			if name == "" && len(args) != 0 {
@@ -23,14 +23,14 @@ func initCmd() *cobra.Command {
 			var rule = fmt.Sprintf(`[A-Za-z0-9_]{%d}`, len([]rune(name)))
 			var reg = regexp.MustCompilePOSIX(rule)
 			if !reg.MatchString(name) {
-				logger.Errorf("folder name rule must be: %s", rule)
+				logger.Error("folder name rule must be: " + rule)
 				return
 			}
 			if err := cloneTemplate(name); err != nil {
-				logger.Errorf("clone template repository failed: %v", err)
+				logger.Error("clone template repository failed", "reason", err)
 				return
 			}
-			logger.Infof("create folder `%s` success", name)
+			logger.Info("create folder success", "folder", name)
 		},
 	}
 

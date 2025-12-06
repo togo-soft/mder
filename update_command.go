@@ -18,17 +18,17 @@ func updateCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			commit, err := GetRepoLatestCommit()
 			if err != nil {
-				logger.Errorf("get mder version failed: %v", err)
+				logger.Error("get mder version failed", "reason", err)
 				return
 			}
-			logger.Infof("-----\nmder latest version: %s\n更新中...\n", commit.Sha)
+			logger.Info(fmt.Sprintf("-----\nmder latest version: %s\nupdating...\n", commit.Sha))
 			var url = fmt.Sprintf("gitter.top/mder/mder@%s", commit.Sha)
 			_, err = exec.Command("go", "install", url).CombinedOutput()
 			if err != nil {
-				logger.Errorf("install: go install %s\nupdate failed: %v\n", url, err)
+				logger.Error("install: go install %s\nupdate failed: %v\n", url, err)
 				return
 			}
-			logger.Infof("mder %s update success", commit.Sha)
+			logger.Info("mder update success", "hash", commit.Sha)
 		},
 	}
 
