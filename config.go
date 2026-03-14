@@ -11,12 +11,12 @@ type Logo struct {
 	Enabled bool   `yaml:"enabled"` //	显示或隐藏
 	Width   int64  `yaml:"width"`   // 宽度控制
 	Height  int64  `yaml:"height"`  // 高度控制
-	Url     string `yaml:"url"`     // 源url
+	URL     string `yaml:"url"`     // 源url
 }
 
 // Favicon 自定义favicon
 type Favicon struct {
-	Url string `yaml:"url"`
+	URL string `yaml:"url"`
 }
 
 // SocialLinks 社交媒体链接
@@ -32,14 +32,14 @@ type SocialLinks struct {
 // ICP 备案配置
 type ICP struct {
 	Enabled bool   `yaml:"enabled"` // 显示或隐藏
-	Url     string `yaml:"url"`     // 重定向地址
+	URL     string `yaml:"url"`     // 重定向地址
 	Text    string `yaml:"text"`    // 内容
 }
 
 // CDN 厂商信息
 type CDN struct {
 	Enabled bool   `yaml:"enabled"`
-	Url     string `yaml:"url"`
+	URL     string `yaml:"url"`
 	Image   string `yaml:"image"`
 	Text    string `yaml:"text"`
 }
@@ -103,8 +103,8 @@ func (c *Config) load() error {
 type DeployType string
 
 const (
-	GitHubDeploy DeployType = "github"
-	UpyunDeploy  DeployType = "upyun"
+	DeployTypeGitHub DeployType = "github"
+	DeployTypeUpyun  DeployType = "upyun"
 )
 
 type Deploy struct {

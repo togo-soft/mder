@@ -3,8 +3,7 @@ package internal
 import (
 	"os"
 	"path/filepath"
-
-	"github.com/samber/lo"
+	"slices"
 )
 
 type DataItem struct {
@@ -33,7 +32,7 @@ func GetDataSource(dir string) (DataSource, error) {
 		if ext == "" {
 			continue
 		}
-		if !lo.Contains([]string{".yaml", ".yml"}, ext) {
+		if !slices.Contains([]string{".yaml", ".yml"}, ext) {
 			continue
 		}
 		filename := entry.Name()[:len(entry.Name())-len(filepath.Ext(entry.Name()))]

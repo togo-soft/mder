@@ -1,13 +1,13 @@
 package main
 
 import (
-	"crypto/sha256"
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
-	"runtime"
-	"strconv"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -22,7 +22,7 @@ func mkdir(fp string) error {
 }
 
 func cloneTemplate(base string) error {
-	_, err := exec.Command("git", "clone", "https://gitter.top/mder/template", base).Output()
+	_, err := exec.Command("git", "clone", "https://codeberg.org/mder/template", base).Output()
 	if err != nil {
 		return err
 	}
@@ -33,15 +33,14 @@ func datetimeStringToTime(datetime string) (time.Time, error) {
 	if datetime == "" {
 		return time.Now(), nil
 	}
-	var tpl = "2006-01-02 15:04:05"
-	t, err := time.ParseInLocation(tpl, datetime, time.Local)
+	t, err := time.ParseInLocation(time.DateTime, datetime, time.Local)
 	if err != nil {
 		return time.Now(), err
 	}
 	return t, nil
 }
 
-func mustString(i interface{}) string {
+func toString(i interface{}) string {
 	s, ok := i.(string)
 	if !ok {
 		return ""
@@ -49,7 +48,7 @@ func mustString(i interface{}) string {
 	return s
 }
 
-func mustStringSlice(i interface{}) []string {
+func toStringSlice(i interface{}) []string {
 	var arr []string
 	iarr, ok := i.([]interface{})
 	if !ok {
@@ -63,17 +62,6 @@ func mustStringSlice(i interface{}) []string {
 		arr = append(arr, r)
 	}
 	return arr
-}
-
-func int2String(i int) string {
-	return strconv.FormatInt(int64(i), 10)
-}
-
-func slash(str string) string {
-	if runtime.GOOS == "windows" {
-		return strings.ReplaceAll(str, "/", "\\")
-	}
-	return str
 }
 
 func isCommandExist(name string) bool {
@@ -106,10 +94,11 @@ func uploadToUpyun(auth, dir string) error {
 }
 
 func randString(length int) string {
-	s := sha256.New()
-	s.Write([]byte(time.Now().String()))
-	res := s.Sum(nil)
-	return hex.EncodeToString(res)[:length]
+	b := make([]byte, (length+1)/2)
+	if _, err := rand.Read(b); err != nil {
+		panic(err)
+	}
+	return hex.EncodeToString(b)[:length]
 }
 
 func isDraft(tags []string) bool {
@@ -119,4 +108,32 @@ func isDraft(tags []string) bool {
 		}
 	}
 	return false
+}
+
+func copyDir(src, dst string) error {
+	if _, err := os.Stat(src); os.IsNotExist(err) {
+		return nil
+	}
+	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		targetPath := filepath.Join(dst, relPath)
+		if d.IsDir() {
+			return os.MkdirAll(targetPath, os.ModePerm)
+		}
+		return copyFile(path, targetPath)
+	})
+}
+
+func copyFile(src, dst string) error {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, data, os.ModePerm)
 }

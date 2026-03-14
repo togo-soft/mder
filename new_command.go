@@ -32,7 +32,7 @@ func newPostCmd() *cobra.Command {
 				name = args[0]
 			}
 			var pureName = strings.ReplaceAll(name, ".md", "")
-			pureName = strings.ReplaceAll(name, "-", " ")
+			pureName = strings.ReplaceAll(pureName, "-", " ")
 			// 空格处理
 			name = strings.ReplaceAll(name, " ", "-")
 			if !strings.HasSuffix(name, ".md") {
@@ -40,8 +40,8 @@ func newPostCmd() *cobra.Command {
 			}
 			filename := fmt.Sprintf("posts/%s", name)
 			if catalog != "" {
-				_name := strings.ReplaceAll(name, "/", "-")
-				filename = fmt.Sprintf("posts/%s/%s", catalog, _name)
+				sanitizedName := strings.ReplaceAll(name, "/", "-")
+				filename = fmt.Sprintf("posts/%s/%s", catalog, sanitizedName)
 			}
 			// 检测文件夹是否存在
 			dir := filepath.Dir(filename)
@@ -57,7 +57,7 @@ func newPostCmd() *cobra.Command {
 				return
 			}
 			defer f.Close()
-			var data = fmt.Sprintf("---\ntitle: %s\ndate: %s\ncatagories: %s\ntags:\n---", pureName, time.Now().Format("2006-01-02 15:04:05"), catalog)
+			var data = fmt.Sprintf("---\ntitle: %s\ndate: %s\ncategories: %s\ntags:\n---", pureName, time.Now().Format("2006-01-02 15:04:05"), catalog)
 			if _, err := f.Write([]byte(data)); err != nil {
 				logger.Error("create file failed", "reason", err)
 				return

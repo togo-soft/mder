@@ -8,7 +8,7 @@ import (
 
 func deployCmd() *cobra.Command {
 	var path string
-	var outter Outter
+	var gen Generator
 	cmd := &cobra.Command{
 		Use:     "deploy",
 		Aliases: []string{"d"},
@@ -18,20 +18,20 @@ func deployCmd() *cobra.Command {
 				BaseDir = strings.TrimSuffix(path, "/")
 			}
 
-			if err := outter.loadConfig(); err != nil {
+			if err := gen.loadConfig(); err != nil {
 				logger.Error("load config failed", "reason", err)
 				return err
 			}
-			config := outter.Config.Deploy
+			config := gen.Config.Deploy
 			switch config.Type {
-			case UpyunDeploy:
+			case DeployTypeUpyun:
 				if !isCommandExist("upx") {
 					if err := goInstall("github.com/upyun/upx/cmd/upx"); err != nil {
 						logger.Error("install upx failed", "reason", err)
 						return err
 					}
 				}
-			case GitHubDeploy:
+			case DeployTypeGitHub:
 			}
 
 			// generate source
@@ -43,9 +43,9 @@ func deployCmd() *cobra.Command {
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			config := outter.Config.Deploy
+			config := gen.Config.Deploy
 			switch config.Type {
-			case UpyunDeploy:
+			case DeployTypeUpyun:
 				if config.UpyunAuth == "" {
 					logger.Error("please config upyun auth string: upx auth [bucket] [operator] [password]")
 					return
@@ -55,7 +55,7 @@ func deployCmd() *cobra.Command {
 					return
 				}
 				logger.Info("deploy to upyun success")
-			case GitHubDeploy:
+			case DeployTypeGitHub:
 			}
 
 		},

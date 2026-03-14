@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -22,7 +22,7 @@ import (
 
 func generateCmd() *cobra.Command {
 	var startAt time.Time
-	var outter = newOutter()
+	var gen = newGenerator()
 	var path string
 	cmd := &cobra.Command{
 		Use:     "generate",
@@ -34,7 +34,7 @@ func generateCmd() *cobra.Command {
 			}
 			startAt = time.Now()
 			// 读取配置文件
-			if err := outter.loadConfig(); err != nil {
+			if err := gen.loadConfig(); err != nil {
 				logger.Error("load config file failed", "reason", err)
 				return err
 			}
@@ -47,24 +47,24 @@ func generateCmd() *cobra.Command {
 				logger.Error("get data source failed", "reason", err)
 				return
 			}
-			outter.DataSource = dataSource
+			gen.DataSource = dataSource
 			// 读取主题模板文件
-			if err := outter.readTheme(outter.Config.Site.Theme); err != nil {
+			if err := gen.readTheme(gen.Config.Site.Theme); err != nil {
 				logger.Error("read theme source failed", "reason", err)
 				return
 			}
 			// 读取页面列表
-			if err := outter.readAllPages(); err != nil {
+			if err := gen.readAllPages(); err != nil {
 				logger.Error("read page source failed", "reason", err)
 				return
 			}
 			// 读取文章列表
-			if err := outter.readAllPosts(); err != nil {
+			if err := gen.readAllPosts(); err != nil {
 				logger.Error("read post source failed", "reason", err)
 				return
 			}
 			// 数据写入模板文件
-			outter.generate()
+			gen.generate()
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			endAt := time.Since(startAt)
@@ -76,7 +76,7 @@ func generateCmd() *cobra.Command {
 }
 
 // readAllPosts 读取所有post文章
-func (o *Outter) readAllPosts() error {
+func (g *Generator) readAllPosts() error {
 	var postDir = BaseDir + "/posts"
 	dirs, err := os.ReadDir(postDir)
 	if err != nil {
@@ -92,13 +92,13 @@ func (o *Outter) readAllPosts() error {
 		}
 		// 不是目录 没有分类
 		if info.IsDir() {
-			o.Posts = append(o.Posts, o.readPosts(postDir, info.Name())...)
+			g.Posts = append(g.Posts, g.readPosts(postDir, info.Name())...)
 			continue
 		}
 		if !strings.HasSuffix(info.Name(), ".md") {
 			continue
 		}
-		post, err := o.readPost(fmt.Sprintf("%s/%s", postDir, info.Name()))
+		post, err := g.readPost(fmt.Sprintf("%s/%s", postDir, info.Name()))
 		if err != nil {
 			logger.Error("read post file failed", "reason", err)
 			continue
@@ -109,18 +109,18 @@ func (o *Outter) readAllPosts() error {
 		post.Category = "default"
 		if isDraft(post.Tags) {
 			post.Link = fmt.Sprintf("/draft/%s.html", post.FileBasename)
-			o.DraftPosts = append(o.DraftPosts, post)
+			g.DraftPosts = append(g.DraftPosts, post)
 		} else {
-			o.Posts = append(o.Posts, post)
+			g.Posts = append(g.Posts, post)
 		}
 	}
-	sort.Slice(o.Posts, func(i, j int) bool {
-		return o.Posts[i].CreatedAt.Unix() > o.Posts[j].CreatedAt.Unix()
+	sort.Slice(g.Posts, func(i, j int) bool {
+		return g.Posts[i].CreatedAt.Unix() > g.Posts[j].CreatedAt.Unix()
 	})
 	return nil
 }
 
-func (o *Outter) readPost(fp string) (*Post, error) {
+func (g *Generator) readPost(fp string) (*Post, error) {
 	var post = new(Post)
 	content, err := os.ReadFile(fp)
 	if err != nil {
@@ -152,20 +152,20 @@ func (o *Outter) readPost(fp string) (*Post, error) {
 	}
 
 	metaData := meta.Get(parserContext)
-	post.CreatedAt, err = datetimeStringToTime(mustString(metaData["date"]))
+	post.CreatedAt, err = datetimeStringToTime(toString(metaData["date"]))
 	if err != nil {
 		logger.Error("get post created_at time failed, please check file content", "name", post.FileBasename)
 		return nil, err
 	}
 	post.CreatedAtFormat = post.CreatedAt.Format("2006-01-02")
-	post.Title = mustString(metaData["title"])
-	post.Tags = mustStringSlice(metaData["tags"])
-	post.Category = mustString(metaData["category"])
+	post.Title = toString(metaData["title"])
+	post.Tags = toStringSlice(metaData["tags"])
+	post.Category = toString(metaData["category"])
 	post.MD = buf.String()
 	return post, nil
 }
 
-func (o *Outter) readPage(fp string) (*Page, error) {
+func (g *Generator) readPage(fp string) (*Page, error) {
 	var page = new(Page)
 	content, err := os.ReadFile(fp)
 	if err != nil {
@@ -179,12 +179,12 @@ func (o *Outter) readPage(fp string) (*Page, error) {
 		return nil, err
 	}
 	metaData := meta.Get(context)
-	page.Title = mustString(metaData["title"])
+	page.Title = toString(metaData["title"])
 	page.MD = buf.String()
 	return page, nil
 }
 
-func (o *Outter) readPosts(base, category string) []*Post {
+func (g *Generator) readPosts(base, category string) []*Post {
 	var dir = fmt.Sprintf("%s/%s", base, category)
 	dirs, err := os.ReadDir(dir)
 	if err != nil {
@@ -205,7 +205,7 @@ func (o *Outter) readPosts(base, category string) []*Post {
 			logger.Error("read file info failed", "reason", err)
 			return nil
 		}
-		post, err := o.readPost(fmt.Sprintf("%s/%s", dir, info.Name()))
+		post, err := g.readPost(fmt.Sprintf("%s/%s", dir, info.Name()))
 		if err != nil {
 			logger.Error("read post failed", "reason", err)
 			continue
@@ -216,7 +216,7 @@ func (o *Outter) readPosts(base, category string) []*Post {
 		post.Category = category
 		if isDraft(post.Tags) {
 			post.Link = fmt.Sprintf("/draft/%s.html", post.FileBasename)
-			o.DraftPosts = append(o.DraftPosts, post)
+			g.DraftPosts = append(g.DraftPosts, post)
 		} else {
 			posts = append(posts, post)
 		}
@@ -224,7 +224,7 @@ func (o *Outter) readPosts(base, category string) []*Post {
 	return posts
 }
 
-func (o *Outter) readAllPages() error {
+func (g *Generator) readAllPages() error {
 	var dir = BaseDir + "/pages"
 	dirs, err := os.ReadDir(dir)
 	if err != nil {
@@ -238,66 +238,53 @@ func (o *Outter) readAllPages() error {
 		if !strings.HasSuffix(info.Name(), ".md") {
 			continue
 		}
-		page, err := o.readPage(fmt.Sprintf("%s/%s", dir, info.Name()))
+		page, err := g.readPage(fmt.Sprintf("%s/%s", dir, info.Name()))
 		if err != nil {
 			logger.Error("read page file failed", "reason", err)
 			continue
 		}
 		page.Link = strings.ReplaceAll(info.Name(), ".md", "")
-		o.Pages = append(o.Pages, page)
+		g.Pages = append(g.Pages, page)
 	}
 	return nil
 }
 
-func (o *Outter) readTheme(themeName string) (err error) {
-	o.Theme = new(Theme)
-	var dir = fmt.Sprintf("%s/themes/%s", BaseDir, themeName)
-	o.Theme.BaseLayout, err = os.ReadFile(fmt.Sprintf("%s/base.html", dir))
-	if err != nil {
-		logger.Error("read base.html theme file failed", "reason", err)
-		return err
+func (g *Generator) readTheme(themeName string) error {
+	g.Theme = new(Theme)
+	dir := fmt.Sprintf("%s/themes/%s", BaseDir, themeName)
+
+	type layoutEntry struct {
+		name   string
+		target *[]byte
 	}
-	o.Theme.IndexLayout, err = os.ReadFile(fmt.Sprintf("%s/index.html", dir))
-	if err != nil {
-		logger.Error("read index.html theme file failed", "reason", err)
-		return err
-	}
-	o.Theme.PageLayout, err = os.ReadFile(fmt.Sprintf("%s/page.html", dir))
-	if err != nil {
-		logger.Error("read page.html theme file failed", "reason", err)
-		return err
-	}
-	o.Theme.PostLayout, err = os.ReadFile(fmt.Sprintf("%s/post.html", dir))
-	if err != nil {
-		logger.Error("read pose.html theme file failed", "reason", err)
-		return err
-	}
-	o.Theme.ArchiveLayout, err = os.ReadFile(fmt.Sprintf("%s/archive.html", dir))
-	if err != nil {
-		logger.Error("read archive.html theme file failed", "reason", err)
-		return err
-	}
-	o.Theme.TagLayout, err = os.ReadFile(fmt.Sprintf("%s/tag.html", dir))
-	if err != nil {
-		logger.Error("read tag.html theme file failed", "reason", err)
-		return err
-	}
-	o.Theme.CategoryLayout, err = os.ReadFile(fmt.Sprintf("%s/category.html", dir))
-	if err != nil {
-		logger.Error("read category.html theme file failed", "reason", err)
-		return err
+	entries := []layoutEntry{
+		{"base", &g.Theme.BaseLayout},
+		{"index", &g.Theme.IndexLayout},
+		{"page", &g.Theme.PageLayout},
+		{"post", &g.Theme.PostLayout},
+		{"archive", &g.Theme.ArchiveLayout},
+		{"tag", &g.Theme.TagLayout},
+		{"category", &g.Theme.CategoryLayout},
 	}
 
-	o.Theme.IndexLayout = bytes.ReplaceAll(o.Theme.BaseLayout, []byte("{{layout_placeholder}}"), o.Theme.IndexLayout)
-	o.Theme.PageLayout = bytes.ReplaceAll(o.Theme.BaseLayout, []byte("{{layout_placeholder}}"), o.Theme.PageLayout)
-	o.Theme.PostLayout = bytes.ReplaceAll(o.Theme.BaseLayout, []byte("{{layout_placeholder}}"), o.Theme.PostLayout)
-	o.Theme.ArchiveLayout = bytes.ReplaceAll(o.Theme.BaseLayout, []byte("{{layout_placeholder}}"), o.Theme.ArchiveLayout)
-	o.Theme.TagLayout = bytes.ReplaceAll(o.Theme.BaseLayout, []byte("{{layout_placeholder}}"), o.Theme.TagLayout)
-	o.Theme.CategoryLayout = bytes.ReplaceAll(o.Theme.BaseLayout, []byte("{{layout_placeholder}}"), o.Theme.TagLayout)
+	for _, e := range entries {
+		data, err := os.ReadFile(fmt.Sprintf("%s/%s.html", dir, e.name))
+		if err != nil {
+			logger.Error(fmt.Sprintf("read %s.html theme file failed", e.name), "reason", err)
+			return err
+		}
+		*e.target = data
+	}
+
+	for _, e := range entries[1:] {
+		*e.target = bytes.ReplaceAll(g.Theme.BaseLayout, []byte("{{layout_placeholder}}"), *e.target)
+	}
+
 	return nil
 }
 
-type Outter struct {
+// Generator holds all data needed for site generation
+type Generator struct {
 	SourceVersion string              // 资源号 防缓存
 	Config        *Config             // 全局配置
 	DataSource    internal.DataSource // 记录source/data下的所有文件
@@ -341,8 +328,8 @@ type Page struct {
 	MD    string // 页面内容
 }
 
-func newOutter() *Outter {
-	return &Outter{
+func newGenerator() *Generator {
+	return &Generator{
 		SourceVersion: randString(8),
 		Config:        new(Config),
 		Now:           time.Now(),
@@ -350,35 +337,35 @@ func newOutter() *Outter {
 }
 
 // loadConfig 加载配置文件
-func (o *Outter) loadConfig() error {
-	if o.Config == nil {
-		o.Config = new(Config)
+func (g *Generator) loadConfig() error {
+	if g.Config == nil {
+		g.Config = new(Config)
 	}
-	return o.Config.load()
+	return g.Config.load()
 }
 
 // generate 文件生成
-func (o *Outter) generate() {
+func (g *Generator) generate() {
 	// 清理dist目录
-	if err := o.clearDistDirectory(); err != nil {
+	if err := g.clearDistDirectory(); err != nil {
 		logger.Error("clear dist directory failed", "reason", err)
 		return
 	}
-	if err := o.sourceCopy(); err != nil {
+	if err := g.sourceCopy(); err != nil {
 		logger.Error("copy theme source to dist failed", "reason", err)
 		return
 	}
-	_ = o.generateIndex()
-	o.generatePost()
-	o.generateDraftPost()
-	o.generatePage()
-	o.generateArchives()
-	o.generateTags()
-	o.generateCategories()
+	_ = g.generateIndex()
+	g.generatePosts(g.Posts, "")
+	g.generatePosts(g.DraftPosts, "draft")
+	g.generatePage()
+	g.generateArchives()
+	g.generateTags()
+	g.generateCategories()
 }
 
 // clearDistDirectory 清理dist目录
-func (o *Outter) clearDistDirectory() error {
+func (g *Generator) clearDistDirectory() error {
 	if err := os.RemoveAll(BaseDir + "/dist"); err != nil {
 		logger.Error("remove old dist directory failed", "reason", err)
 		return err
@@ -392,55 +379,32 @@ func (o *Outter) clearDistDirectory() error {
 }
 
 // sourceCopy 资源拷贝 将主题的资源拷贝到目标文件夹中
-func (o *Outter) sourceCopy() error {
-	sourcePath := slash(fmt.Sprintf(BaseDir+"/themes/%s/", o.Config.Site.Theme))
-	destPath := slash(BaseDir + "/dist/" + o.SourceVersion + "/")
-	// mkdir
-	cssDir := fmt.Sprintf("%s/css", destPath)
-	jsDir := fmt.Sprintf("%s/js", destPath)
-	imagesDir := fmt.Sprintf("%s/images", destPath)
-	if err := mkdir(cssDir); err != nil {
-		logger.Error("mkdir css directory failed", "reason", err)
-		return err
-	}
-	if err := mkdir(jsDir); err != nil {
-		logger.Error("mkdir js directory failed", "reason", err)
-	}
-	if err := mkdir(imagesDir); err != nil {
-		logger.Error("mkdir images directory failed", "reason", err)
-	}
-	cmd := exec.Command("cp", "-r", sourcePath+"css", destPath)
-	if err := cmd.Run(); err != nil {
-		logger.Info(cmd.String())
-		logger.Error("copy theme css source failed", "reason", err)
-		return err
-	}
-	cmd = exec.Command("cp", "-r", sourcePath+"js", destPath)
-	if err := cmd.Run(); err != nil {
-		logger.Info(cmd.String())
-		logger.Error("copy theme js source failed", "reason", err)
-		return err
-	}
-	cmd = exec.Command("cp", "-r", sourcePath+"images", destPath)
-	if err := cmd.Run(); err != nil {
-		logger.Info(cmd.String())
-		logger.Error("copy theme images source failed", "reason", err)
-		return err
+func (g *Generator) sourceCopy() error {
+	sourceDir := fmt.Sprintf("%s/themes/%s", BaseDir, g.Config.Site.Theme)
+	destDir := BaseDir + "/dist/" + g.SourceVersion
+
+	for _, subDir := range []string{"css", "js", "images"} {
+		src := sourceDir + "/" + subDir
+		dst := destDir + "/" + subDir
+		if err := copyDir(src, dst); err != nil {
+			logger.Error("copy theme "+subDir+" source failed", "reason", err)
+			return err
+		}
 	}
 	return nil
 }
 
 // generateIndex 首页生成
-func (o *Outter) generateIndex() error {
+func (g *Generator) generateIndex() error {
 	indexTemplate := template.New("index")
 
 	funcMap["title"] = func() string {
-		return o.Config.Site.Title
+		return g.Config.Site.Title
 	}
 
 	indexTemplate.Funcs(funcMap)
 
-	indexTemplate, err := indexTemplate.Parse(string(o.Theme.IndexLayout))
+	indexTemplate, err := indexTemplate.Parse(string(g.Theme.IndexLayout))
 	if err != nil {
 		logger.Error("parse index layout failed", "reason", err)
 		return err
@@ -450,8 +414,8 @@ func (o *Outter) generateIndex() error {
 	var buffer = bytes.Buffer{}
 
 	// 没开分页
-	if !o.Config.PageConfig.Paginate {
-		err = indexTemplate.Execute(&buffer, o)
+	if !g.Config.PageConfig.Paginate {
+		err = indexTemplate.Execute(&buffer, g)
 		if err != nil {
 			logger.Error("generate index page failed", "reason", err)
 			return err
@@ -466,26 +430,25 @@ func (o *Outter) generateIndex() error {
 	}
 
 	// 分页数据不规范
-	if o.Config.PageConfig.Size < 1 {
+	if g.Config.PageConfig.Size < 1 {
 		logger.Error("page size must > 1")
 		return err
 	}
 
-	var pageSize = int(math.Ceil(float64(len(o.Posts)) / float64(o.Config.PageConfig.Size)))
-	o.Config.PageConfig.Total = pageSize
-	var posts = make([]*Post, len(o.Posts))
-	copy(posts, o.Posts)
+	var pageSize = int(math.Ceil(float64(len(g.Posts)) / float64(g.Config.PageConfig.Size)))
+	g.Config.PageConfig.Total = pageSize
 	for i := 0; i < pageSize; i++ {
-		rightBorder := int(o.Config.PageConfig.Size) * (i + 1)
-		if rightBorder > len(posts) {
-			rightBorder = len(posts)
+		rightBorder := int(g.Config.PageConfig.Size) * (i + 1)
+		if rightBorder > len(g.Posts) {
+			rightBorder = len(g.Posts)
 		}
-		leftBorder := int(o.Config.PageConfig.Size) * (i)
-		o.Posts = make([]*Post, rightBorder-leftBorder)
-		copy(o.Posts, posts[leftBorder:rightBorder])
-		o.Config.PageConfig.CurrentSize = i + 1
+		leftBorder := int(g.Config.PageConfig.Size) * i
+		g.Config.PageConfig.CurrentSize = i + 1
 
-		err = indexTemplate.Execute(&buffer, o)
+		pageView := *g
+		pageView.Posts = g.Posts[leftBorder:rightBorder]
+
+		err = indexTemplate.Execute(&buffer, &pageView)
 		if err != nil {
 			logger.Error("generate index page failed", "reason", err)
 			return err
@@ -494,7 +457,7 @@ func (o *Outter) generateIndex() error {
 		if i == 0 {
 			// 第一次的时候创建目录
 			dir := BaseDir + "/dist/page"
-			if err := o.createDir(dir); err != nil {
+			if err := g.createDir(dir); err != nil {
 				logger.Error("create index page failed", "reason", err)
 				return err
 			}
@@ -511,28 +474,26 @@ func (o *Outter) generateIndex() error {
 		}
 		buffer.Reset()
 	}
-	o.Posts = make([]*Post, len(posts))
-	copy(o.Posts, posts)
 	return nil
 }
 
-func (o *Outter) generatePost() {
+func (g *Generator) generatePosts(posts []*Post, fixedOutputDir string) {
 	postTemplate := template.New("post")
 	var postBuffer = new(bytes.Buffer)
-	for _, post := range o.Posts {
-		instance := PostOutter{
+	for _, post := range posts {
+		instance := PostContext{
 			Post:   post,
-			Config: o.Config,
+			Config: g.Config,
 		}
-		instance.Outter = o
+		instance.Generator = g
 		funcMap["title"] = func() string {
 			return instance.Post.Title
 		}
 		funcMap["post_name"] = func() string {
-			return o.Config.Site.Title
+			return g.Config.Site.Title
 		}
 		postTemplate.Funcs(funcMap)
-		postTemplate, err := postTemplate.Parse(string(o.Theme.PostLayout))
+		postTemplate, err := postTemplate.Parse(string(g.Theme.PostLayout))
 		if err != nil {
 			logger.Error("generate post page failed", "reason", err)
 			return
@@ -543,12 +504,13 @@ func (o *Outter) generatePost() {
 			return
 		}
 		// buffer写文件
-		var catDir = fmt.Sprintf(BaseDir+"/dist/%s", post.Category)
-		if !isExist(catDir) {
-			if err := mkdir(catDir); err != nil {
-				logger.Error("create directory failed", "reason", err)
-				return
-			}
+		outputDir := fixedOutputDir
+		if outputDir == "" {
+			outputDir = post.Category
+		}
+		var catDir = fmt.Sprintf(BaseDir+"/dist/%s", outputDir)
+		if err := g.createDir(catDir); err != nil {
+			return
 		}
 		var filename = fmt.Sprintf("%s/%s.html", catDir, post.FileBasename)
 		if err := os.WriteFile(filename, postBuffer.Bytes(), os.ModePerm); err != nil {
@@ -559,66 +521,23 @@ func (o *Outter) generatePost() {
 	}
 }
 
-func (o *Outter) generateDraftPost() {
-	postTemplate := template.New("post")
-	var postBuffer = new(bytes.Buffer)
-	for _, post := range o.DraftPosts {
-		instance := PostOutter{
-			Post:   post,
-			Config: o.Config,
-		}
-		instance.Outter = o
-		funcMap["title"] = func() string {
-			return instance.Post.Title
-		}
-		funcMap["post_name"] = func() string {
-			return o.Config.Site.Title
-		}
-		postTemplate.Funcs(funcMap)
-		postTemplate, err := postTemplate.Parse(string(o.Theme.PostLayout))
-		if err != nil {
-			logger.Error("generate post page failed", "reason", err)
-			return
-		}
-		// 入buffer
-		if err := postTemplate.Execute(postBuffer, instance); err != nil {
-			logger.Error("generate post page failed", "reason", err)
-			return
-		}
-		// buffer写文件
-		var catDir = BaseDir + "/dist/draft"
-		if !isExist(catDir) {
-			if err := mkdir(catDir); err != nil {
-				logger.Error("create directory failed", "reason", err)
-				return
-			}
-		}
-		var filename = fmt.Sprintf("%s/%s.html", catDir, post.FileBasename)
-		if err := os.WriteFile(filename, postBuffer.Bytes(), os.ModePerm); err != nil {
-			logger.Error("write file failed", "reason", err)
-			return
-		}
-		postBuffer.Reset()
-	}
-}
-
-func (o *Outter) generatePage() {
+func (g *Generator) generatePage() {
 	pageTemplate := template.New("page")
 	var pageBuffer = new(bytes.Buffer)
-	for _, page := range o.Pages {
-		instance := PageOutter{
+	for _, page := range g.Pages {
+		instance := PageContext{
 			Page:   page,
-			Config: o.Config,
+			Config: g.Config,
 		}
-		instance.Outter = o
+		instance.Generator = g
 		funcMap["title"] = func() string {
 			return page.Title
 		}
 		funcMap["page_name"] = func() string {
-			return o.Config.Site.Title
+			return g.Config.Site.Title
 		}
 		pageTemplate.Funcs(funcMap)
-		pageTemplate, err := pageTemplate.Parse(string(o.Theme.PageLayout))
+		pageTemplate, err := pageTemplate.Parse(string(g.Theme.PageLayout))
 		if err != nil {
 			logger.Error("generate page page failed", "reason", err)
 			return
@@ -638,15 +557,15 @@ func (o *Outter) generatePage() {
 	}
 }
 
-func (o *Outter) generateArchives() {
+func (g *Generator) generateArchives() {
 	archiveTemplate := template.New("archive")
 	var archiveBuffer = new(bytes.Buffer)
 	// 按时间归档
 	var m = make(map[string][]*Post)
-	for _, post := range o.Posts {
+	for _, post := range g.Posts {
 		newPost := post
 		newPost.MD = ""
-		m[int2String(post.CreatedAt.Year())] = append(m[int2String(post.CreatedAt.Year())], newPost)
+		m[strconv.Itoa(post.CreatedAt.Year())] = append(m[strconv.Itoa(post.CreatedAt.Year())], newPost)
 	}
 
 	var postData []*PostData
@@ -661,23 +580,23 @@ func (o *Outter) generateArchives() {
 		return postData[i].Key > postData[j].Key
 	})
 
-	var instance = PageOutter{
+	var instance = PageContext{
 		Page: &Page{
 			Title: "Archives",
 			Link:  "archives",
 		},
-		Config:   o.Config,
+		Config:   g.Config,
 		PostData: postData,
 	}
-	instance.Outter = o
+	instance.Generator = g
 	funcMap["title"] = func() string {
 		return instance.Page.Title
 	}
 	funcMap["page_name"] = func() string {
-		return o.Config.Site.Title
+		return g.Config.Site.Title
 	}
 	archiveTemplate.Funcs(funcMap)
-	archiveTemplate, err := archiveTemplate.Parse(string(o.Theme.ArchiveLayout))
+	archiveTemplate, err := archiveTemplate.Parse(string(g.Theme.ArchiveLayout))
 	if err != nil {
 		logger.Error("generate archive page failed", "reason", err)
 		return
@@ -697,34 +616,43 @@ func (o *Outter) generateArchives() {
 	archiveBuffer.Reset()
 }
 
-func (o *Outter) generateTags() {
-	tagsTemplate := template.New("tags")
-	var tagsBuffer = new(bytes.Buffer)
-
-	// 按标签归档
-	var mTag = make(map[string][]*Post)
-	for _, post := range o.Posts {
+func (g *Generator) generateTags() {
+	tagGroups := make(map[string][]*Post)
+	for _, post := range g.Posts {
 		for _, tag := range post.Tags {
-			newPost := post
-			newPost.MD = ""
-			mTag[tag] = append(mTag[tag], newPost)
+			tagGroups[tag] = append(tagGroups[tag], post)
 		}
 	}
+	g.generateGroupedArchive("tags", g.Theme.TagLayout, tagGroups, "tags")
+}
 
-	for tag, posts := range mTag {
+func (g *Generator) generateCategories() {
+	catGroups := make(map[string][]*Post)
+	for _, post := range g.Posts {
+		catGroups[post.Category] = append(catGroups[post.Category], post)
+	}
+	catGroups["draft"] = g.DraftPosts
+	g.generateGroupedArchive("categories", g.Theme.CategoryLayout, catGroups, "category")
+}
+
+func (g *Generator) generateGroupedArchive(templateName string, layout []byte, groups map[string][]*Post, outputDir string) {
+	tmpl := template.New(templateName)
+	var buf bytes.Buffer
+
+	for name, posts := range groups {
 		// 按时间归档
-		var m = make(map[string][]*Post)
+		yearMap := make(map[string][]*Post)
 		for _, post := range posts {
 			newPost := post
 			newPost.MD = ""
-			m[int2String(post.CreatedAt.Year())] = append(m[int2String(post.CreatedAt.Year())], newPost)
+			yearMap[strconv.Itoa(post.CreatedAt.Year())] = append(yearMap[strconv.Itoa(post.CreatedAt.Year())], newPost)
 		}
 
 		var postData []*PostData
-		for year, _posts := range m {
+		for year, yearPosts := range yearMap {
 			postData = append(postData, &PostData{
 				Key:   year,
-				Posts: _posts,
+				Posts: yearPosts,
 			})
 		}
 
@@ -732,140 +660,59 @@ func (o *Outter) generateTags() {
 			return postData[i].Key > postData[j].Key
 		})
 
-		var instance = PageOutter{
+		instance := PageContext{
 			Page: &Page{
-				Title: tag,
-				Link:  tag,
+				Title: name,
+				Link:  name,
 			},
-			Config:   o.Config,
+			Config:   g.Config,
 			PostData: postData,
 		}
-		instance.Outter = o
+		instance.Generator = g
 		funcMap["title"] = func() string {
 			return instance.Page.Title
 		}
 		funcMap["page_name"] = func() string {
-			return o.Config.Site.Title
+			return g.Config.Site.Title
 		}
-		tagsTemplate.Funcs(funcMap)
-		tagsTemplate, err := tagsTemplate.Parse(string(o.Theme.TagLayout))
+		tmpl.Funcs(funcMap)
+		tmpl, err := tmpl.Parse(string(layout))
 		if err != nil {
-			logger.Error("generate tags page failed", "reason", err)
+			logger.Error("generate "+templateName+" page failed", "reason", err)
 			return
 		}
 
 		// 入buffer
-		if err := tagsTemplate.Execute(tagsBuffer, instance); err != nil {
-			logger.Error("generate tags page failed", "reason", err)
+		if err := tmpl.Execute(&buf, instance); err != nil {
+			logger.Error("generate "+templateName+" page failed", "reason", err)
 			return
 		}
-		// 创建tag文件夹
-		var tagDir = BaseDir + "/dist/tags"
-		if !isExist(tagDir) {
-			if err := mkdir(tagDir); err != nil {
-				logger.Error("create tag directory failed", "reason", err)
-				return
-			}
+		// 创建目录
+		dir := BaseDir + "/dist/" + outputDir
+		if err := g.createDir(dir); err != nil {
+			return
 		}
 		// buffer写文件
-		var filename = fmt.Sprintf("%s/%s.html", tagDir, instance.Page.Link)
-		if err := os.WriteFile(filename, tagsBuffer.Bytes(), os.ModePerm); err != nil {
-			logger.Error("write tag content failed", "reason", err)
+		filename := fmt.Sprintf("%s/%s.html", dir, instance.Page.Link)
+		if err := os.WriteFile(filename, buf.Bytes(), os.ModePerm); err != nil {
+			logger.Error("write "+templateName+" content failed", "reason", err)
 			return
 		}
-		tagsBuffer.Reset()
+		buf.Reset()
 	}
 }
 
-func (o *Outter) generateCategories() {
-	tagsTemplate := template.New("categories")
-	var tagsBuffer = new(bytes.Buffer)
-
-	// 按标签归档
-	var cats = make(map[string][]*Post)
-	for _, post := range o.Posts {
-		newPost := post
-		cats[post.Category] = append(cats[post.Category], newPost)
-	}
-	cats["draft"] = o.DraftPosts
-
-	for tag, posts := range cats {
-		// 按时间归档
-		var m = make(map[string][]*Post)
-		for _, post := range posts {
-			newPost := post
-			newPost.MD = ""
-			m[int2String(post.CreatedAt.Year())] = append(m[int2String(post.CreatedAt.Year())], newPost)
-		}
-
-		var postData []*PostData
-		for year, _posts := range m {
-			postData = append(postData, &PostData{
-				Key:   year,
-				Posts: _posts,
-			})
-		}
-
-		sort.Slice(postData, func(i, j int) bool {
-			return postData[i].Key > postData[j].Key
-		})
-
-		var instance = PageOutter{
-			Page: &Page{
-				Title: tag,
-				Link:  tag,
-			},
-			Config:   o.Config,
-			PostData: postData,
-		}
-		instance.Outter = o
-		funcMap["title"] = func() string {
-			return instance.Page.Title
-		}
-		funcMap["page_name"] = func() string {
-			return o.Config.Site.Title
-		}
-		tagsTemplate.Funcs(funcMap)
-		tagsTemplate, err := tagsTemplate.Parse(string(o.Theme.TagLayout))
-		if err != nil {
-			logger.Error("generate tags page failed", "reason", err)
-			return
-		}
-
-		// 入buffer
-		if err := tagsTemplate.Execute(tagsBuffer, instance); err != nil {
-			logger.Error("generate tags page failed", "reason", err)
-			return
-		}
-		// 创建tag文件夹
-		var tagDir = BaseDir + "/dist/category"
-		if !isExist(tagDir) {
-			if err := mkdir(tagDir); err != nil {
-				logger.Error("create tag directory failed", "reason", err)
-				return
-			}
-		}
-		// buffer写文件
-		var filename = fmt.Sprintf("%s/%s.html", tagDir, instance.Page.Link)
-		if err := os.WriteFile(filename, tagsBuffer.Bytes(), os.ModePerm); err != nil {
-			logger.Error("write tag content failed", "reason", err)
-			return
-		}
-		tagsBuffer.Reset()
-	}
-}
-
-type PostOutter struct {
+type PostContext struct {
 	Post   *Post
 	Config *Config
-	*Outter
+	*Generator
 }
 
-type PageOutter struct {
+type PageContext struct {
 	Page     *Page
 	Config   *Config
 	PostData []*PostData
-	*Outter
+	*Generator
 }
 
 type PostData struct {
@@ -873,7 +720,7 @@ type PostData struct {
 	Posts []*Post
 }
 
-func (o *Outter) createDir(fp string) error {
+func (g *Generator) createDir(fp string) error {
 	if !isExist(fp) {
 		if err := mkdir(fp); err != nil {
 			logger.Error("create directory failed", "dir", fp, "reason", err)
@@ -886,7 +733,7 @@ func (o *Outter) createDir(fp string) error {
 var funcMap = template.FuncMap{
 	"getSource": getSource,
 	"add":       add,
-	"sum":       sum,
+	"sub":       sub,
 }
 
 func getSource(data internal.DataSource, key string) []*internal.DataItem {
@@ -897,6 +744,6 @@ func add(a, b int) int {
 	return a + b
 }
 
-func sum(a, b int) int {
+func sub(a, b int) int {
 	return a - b
 }
