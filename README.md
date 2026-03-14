@@ -6,7 +6,7 @@
 
 ```shell
 # 执行安装
-go install gitter.top/mder/mder@latest
+go install codeberg.org/mder/mder@latest
 # 创建第一个项目
 mder init --name "my_first_blog"
 # 本地预览

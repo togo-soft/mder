@@ -22,7 +22,7 @@ func updateCmd() *cobra.Command {
 				return
 			}
 			logger.Info(fmt.Sprintf("-----\nmder latest version: %s\nupdating...\n", commit.Sha))
-			var url = fmt.Sprintf("gitter.top/mder/mder@%s", commit.Sha)
+			var url = fmt.Sprintf("codeberg.org/mder/mder@%s", commit.Sha)
 			_, err = exec.Command("go", "install", url).CombinedOutput()
 			if err != nil {
 				logger.Error("install: go install %s\nupdate failed: %v\n", url, err)

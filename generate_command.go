@@ -17,7 +17,7 @@ import (
 	"github.com/yuin/goldmark/text"
 	"go.abhg.dev/goldmark/toc"
 
-	"gitter.top/mder/mder/internal"
+	"codeberg.org/mder/mder/internal"
 )
 
 func generateCmd() *cobra.Command {

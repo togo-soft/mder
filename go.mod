@@ -1,4 +1,4 @@
-module gitter.top/mder/mder
+module codeberg.org/mder/mder
 
 go 1.24
 
