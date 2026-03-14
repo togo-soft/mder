@@ -2,8 +2,8 @@ variables:
   platforms: &platforms
     - name: codeberg
       enabled: true
-      owner: application
-      repository: govm
+      owner: mder
+      repository: mder
       url: ssh://git@codeberg.org/mder/mder.git
       ssh_key:
         from_secret: ssh_key
@@ -18,7 +18,7 @@ variables:
     - name: github
       enabled: true
       owner: togo-soft
-      repository: govm
+      repository: mder
       url: git@github.com:togo-soft/mder.git
       ssh_key:
         from_secret: ssh_key
@@ -32,7 +32,7 @@ variables:
     - name: cnb
       enabled: true
       owner: codedataset
-      repository: govm
+      repository: mder
       url: https://cnb.cool/codedataset/mder
       remote_name: cnb
       username: cnb
@@ -45,7 +45,7 @@ variables:
     - name: gitee
       enabled: true
       owner: codedataset
-      repository: govm
+      repository: mder
       url: https://gitee.com/codedataset/mder.git
       remote_name: gitee
       username: xuthus5
@@ -60,7 +60,7 @@ variables:
     - name: bitbucket
       enabled: true
       owner: xuthus5
-      repository: govm
+      repository: mder
       url: git@bitbucket.org:xuthus5/mder.git
       remote_name: bitbucket
       ssh_key:
