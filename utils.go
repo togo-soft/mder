@@ -22,11 +22,34 @@ func mkdir(fp string) error {
 }
 
 func cloneTemplate(base string) error {
-	_, err := exec.Command("git", "clone", "https://codeberg.org/mder/template", base).Output()
-	if err != nil {
-		return err
+	if isExist(base) {
+		return fmt.Errorf("folder %s already exists", base)
 	}
-	return nil
+	if err := mkdir(base); err != nil {
+		return fmt.Errorf("create folder failed: %w", err)
+	}
+	return copyEmbedDir(frameworkTpl, "template", base)
+}
+
+func copyEmbedDir(embedFS fs.FS, src, dst string) error {
+	return fs.WalkDir(embedFS, src, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		targetPath := filepath.Join(dst, relPath)
+		if d.IsDir() {
+			return os.MkdirAll(targetPath, os.ModePerm)
+		}
+		data, err := fs.ReadFile(embedFS, path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(targetPath, data, 0644)
+	})
 }
 
 func datetimeStringToTime(datetime string) (time.Time, error) {

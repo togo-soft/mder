@@ -1,0 +1,48 @@
+# title 网站标题
+title: mder
+# theme 网站主题
+theme: indust
+# seo 网站seo优化
+seo:
+  # subtitle 副标题
+  subtitle: fast static website generate tool.
+  # description 网站描述
+  description: Write code and love life.
+  # keywords 网站关键字
+  keywords: mder,faster,static
+# person 个人信息
+person:
+  # author 作者名
+  author: mder
+  # github id
+  github_name: xuthus5
+  # email 邮件地址
+  email: xxxxx@gmail.com
+  # wechat_qrcode 在images资源目录下的微信二维码文件
+  wechat_qrcode: wechat.jpg
+  # summary 作者个人简介
+  summary: Hi! This is mder.
+# site 网站配置相关  
+site:
+  # logo_name 在images资源目录下的网站logo文件
+  logo_name: logo.png
+  # icp_enable 是否开启备案信息展示
+  icp_enable: true
+  # icp_name 备案主体信息
+  icp_name: 湘ICP备xxx号-1
+  # icp_link 备案链接点击跳转地址
+  icp_link: https://beian.miit.gov.cn/
+  # cdn_enable 是否开启cdn鸣谢
+  cdn_enable: true
+  # cdn_name cdn厂商名字
+  cdn_name: 又拍云
+  # cdn_image cdn厂商图标
+  cdn_image: upyun.png
+  # cdn_link cdn厂商链接地址
+  cdn_link: https://www.upyun.com/?utm_source=lianmeng&amp;utm_medium=referral
+# deploy 部署配置
+deploy:
+  # 部署端 upyun git
+  type: upyun
+  # 又拍云配置
+  upyun_auth:

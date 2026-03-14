@@ -1,17 +1,21 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"regexp"
 
 	"github.com/spf13/cobra"
 )
 
+//go:embed all:template
+var frameworkTpl embed.FS
+
 func initCmd() *cobra.Command {
 	var name string
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "create a new mder folder",
+		Short: "create a new mder project",
 		Run: func(cmd *cobra.Command, args []string) {
 			if name == "" && len(args) == 0 {
 				logger.Error("folder name empty")

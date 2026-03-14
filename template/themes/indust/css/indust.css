@@ -1,0 +1,118 @@
+body {
+    font-weight: 400;
+    font-size: 16px;
+}
+
+@media (min-width: 300px) {
+    #footer {
+        font-size: 14px;
+    }
+
+    #footer .img-response {
+        height: 24px;
+        vertical-align: middle;
+        line-height: 40px;
+    }
+}
+
+#links ul {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+    letter-spacing: -999px;
+    line-height: 1rem;
+}
+
+#links ul li {
+    display: inline-block;
+    margin-bottom: 0.8rem;
+    border-right: 1px dotted #2bbc8a;
+    vertical-align: middle;
+    letter-spacing: 0;
+}
+
+#links ul li a {
+    margin: 0 1rem;
+}
+
+/* tags 末尾的,隐藏 */
+.article-tag span:last-child {
+    visibility: hidden;
+}
+
+#toc {
+    float: right;
+    clear: both;
+    overflow: auto;
+    margin-top: 1rem;
+    padding-right: 2rem;
+    max-width: 20em;
+    max-height: calc(95vh - 7rem);
+    text-align: right;
+}
+
+#toc ul {
+    list-style: decimal;
+    line-height: 1.725;
+    display: block !important;
+}
+
+#toc li {
+    color: #383838;
+    font-size: 0.8rem;
+    display: block !important;
+    margin-right: 0 !important;
+}
+
+#toc a {
+    background: none;
+    color: inherit;
+    text-decoration: none;
+}
+
+#actions-footer #toc {
+    margin-top: 0;
+}
+
+.markdown-body {
+    font-family: Hack,'LXGW WenKai Screen', sans-serif, monospace !important;
+}
+
+body h2,
+body .h2 {
+    position: relative;
+    display: block;
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
+    color: #383838;
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+pre, pre code {
+    font-family: 'Fira Code', Hack, Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important;
+}
+
+#header #nav,
+#header-post #nav {
+    color: #2bbc8a;
+    letter-spacing: 0.01em;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 1rem;
+}
+
+body table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 16px;
+    overflow: auto;
+    display: block;
+}
+
+#links {
+    overflow-x: hidden;
+}

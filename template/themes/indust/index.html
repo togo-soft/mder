@@ -1,0 +1,91 @@
+<header id="header">
+    <a href="/">
+        <div id="logo" style="background-image: url(/{{.Config.SourceVersion}}/images/{{.Config.Site.LogoName}});"></div>
+        <div id="title">
+            <h1>{{.Config.Title}}</h1>
+        </div>
+    </a>
+    <div id="nav">
+        <ul>
+            <li class="icon">
+                <a href="#"><i class="fas fa-bars fa-2x"></i></a>
+            </li>
+            <li><a href="/">Home</a></li>
+            <li><a href="/about.html">About</a></li>
+            <li><a href="/archives.html">Writing</a></li>
+        </ul>
+    </div>
+</header>
+
+<section id="about">
+    <p>{{.Config.Person.Summary}}</p>
+    <p>
+        Find me on
+        <a class="icon" target="_blank" rel="noopener" href="http://github.com/{{.Config.Person.GithubName}}">
+            <i class="fab fa-github"></i>
+        </a>,
+        <a class="icon" target="_blank" rel="noopener" href="./{{.Config.SourceVersion}}/images/{{.Config.Person.WechatQrcode}}">
+            <i class="fa-brands fa-weixin"></i>
+        </a>and
+        <a class="icon" target="_blank" rel="noopener" href="mailto:{{.Config.Person.Email}}">
+            <i class="fas fa-envelope"></i>
+        </a>.
+    </p>
+
+</section>
+
+<section id="writing">
+    <span class="h1"><a href="/archives">Writing</a></span>
+    <ul class="post-list">
+        {{range .Posts}}
+        <li class="post-item">
+            <div class="meta">
+                <time datetime="2016-11-14T16:49:32.000Z" itemprop="datePublished">{{.CreatedAtFormat}}</time>
+            </div>
+            <span>
+                <a class="" href="{{.Link}}">{{.Title}}</a>
+            </span>
+        </li>
+        {{end}}
+    </ul>
+
+    {{if .Paginate }}
+    <div class="pagination">
+        {{if gt .PageCurrent 1}}<a href="/page/{{sum .PageCurrent 1}}.html"><i class="fas fa-angle-left"></i></a>{{end}}
+        <span class="page-number">{{.PageCurrent}}</span>
+        {{if lt .PageCurrent .PageTotal}}<a href="/page/{{add .PageCurrent 1}}.html"><i class="fas fa-angle-right"></i></a>{{end}}
+    </div>
+    {{end}}
+</section>
+
+<section id="links">
+    <span class="h1"><a href="/">Links</a></span>
+    <ul class="link-list">
+        {{$links := getSource .MetaData "links"}}
+        {{range $links}}
+        {{$name := getSource . "name"}}
+        {{$desc := getSource . "desc"}}
+        {{$url := getSource . "url"}}
+        <li class="link-item">
+            <a href="{{$url}}" title="{{$desc}}">
+                {{$name}}
+            </a>
+        </li>
+        {{end}}
+    </ul>
+</section>
+
+<section id="projects">
+    <span class="h1"><a href="/">Projects</a></span>
+    <ul class="project-list">
+        {{$projects := getSource .MetaData "projects"}}
+        {{range $projects}}
+        {{$name := getSource . "name"}}
+        {{$desc := getSource . "desc"}}
+        {{$url := getSource . "url"}}
+        <li class="project-item">
+            <a href="{{$url}}">{{$name}}</a>: <p>{{$desc}}</p>
+        </li>
+        {{end}}
+    </ul>
+</section>

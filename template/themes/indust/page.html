@@ -1,0 +1,24 @@
+<header id="header">
+    <a href="/">
+        <div id="logo" style="background-image: url(/{{.Config.SourceVersion}}/images/{{.Config.Site.LogoName}});"></div>
+        <div id="title">
+            <h1>{{print page_name}}</h1>
+        </div>
+    </a>
+    <div id="nav">
+        <ul>
+            <li class="icon">
+                <a href="#"><i class="fas fa-bars fa-2x"></i></a>
+            </li>
+            <li><a href="/">Home</a></li>
+            <li><a href="/about.html">About</a></li>
+            <li><a href="/archives.html">Writing</a></li>
+        </ul>
+    </div>
+</header>
+
+<article class="post markdown-body" itemscope="" itemtype="http://schema.org/BlogPosting">
+    <div class="content" itemprop="articleBody">
+        {{.Page.MD}}
+    </div>
+</article>
