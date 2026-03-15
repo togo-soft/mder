@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -85,35 +84,6 @@ func toStringSlice(i interface{}) []string {
 		arr = append(arr, r)
 	}
 	return arr
-}
-
-func isCommandExist(name string) bool {
-	_, err := exec.LookPath(name)
-	if err != nil {
-		return false
-	}
-	return true
-}
-
-func goInstall(pkg string) error {
-	url := fmt.Sprintf("%s@latest", pkg)
-	_, err := exec.Command("go", "install", url).Output()
-	return err
-}
-
-func uploadToUpyun(auth, dir string) error {
-	if strings.HasSuffix(dir, "/") {
-		dir = strings.TrimSuffix(dir, "/")
-	}
-	_, err := exec.Command("upx", "--auth", auth, "rm", "-d", "-a", "/*").Output()
-	if err != nil {
-		return fmt.Errorf("remove old data failed: %v", err)
-	}
-	_, err = exec.Command("upx", "--auth", auth, "put", dir+"/dist/.", "/").Output()
-	if err != nil {
-		return fmt.Errorf("deploy data failed: %v", err)
-	}
-	return nil
 }
 
 func randString(length int) string {

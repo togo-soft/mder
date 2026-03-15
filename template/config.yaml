@@ -40,9 +40,3 @@ site:
   cdn_image: upyun.png
   # cdn_link cdn厂商链接地址
   cdn_link: https://www.upyun.com/?utm_source=lianmeng&amp;utm_medium=referral
-# deploy 部署配置
-deploy:
-  # 部署端 upyun git
-  type: upyun
-  # 又拍云配置
-  upyun_auth:

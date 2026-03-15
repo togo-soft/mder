@@ -11,6 +11,6 @@ go install codeberg.org/mder/mder@latest
 mder init --name "my_first_blog"
 # 本地预览
 mder serve
-# 本地部署
-mder deploy
+# 生成静态可发布内容
+mder generate
 ```

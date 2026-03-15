@@ -1,0 +1,120 @@
+when:
+  - event: [ push, tag ]
+
+clone:
+  git:
+    image: codeberg.org/crow-plugins/clone:1.0.3
+    settings:
+      tags: true
+
+steps:
+  build-linux-amd64:
+    image: golang:1.26
+    environment:
+      GOOS: linux
+      GOARCH: amd64
+      CGO_ENABLED: 0
+    commands:
+      - mkdir -p build
+      - go build -o /build/mder .
+      - tar -czf /build/mder-linux-amd64.tar.gz /build/mder
+
+  build-linux-arm64:
+    image: golang:1.26
+    environment:
+      GOOS: linux
+      GOARCH: arm64
+      CGO_ENABLED: 0
+    commands:
+      - mkdir -p build
+      - go build -o build/mder .
+      - tar -czf /build/mder-linux-arm64.tar.gz /build/mder
+
+  build-windows-amd64:
+    image: golang:1.26
+    environment:
+      GOOS: windows
+      GOARCH: amd64
+      CGO_ENABLED: 0
+    commands:
+      - mkdir -p build
+      - go build -o build/mder .
+      - tar -czf /build/mder-windows-amd64.tar.gz /build/mder
+
+  build-windows-arm64:
+    image: golang:1.26
+    environment:
+      GOOS: windows
+      GOARCH: arm64
+      CGO_ENABLED: 0
+    commands:
+      - mkdir -p build
+      - go build -o build/mder .
+      - tar -czf /build/mder-windows-arm64.tar.gz /build/mder
+
+  build-macos-amd64:
+    image: golang:1.26
+    environment:
+      GOOS: darwin
+      GOARCH: amd64
+      CGO_ENABLED: 0
+    commands:
+      - mkdir -p build
+      - go build -o build/mder .
+      - tar -czf /build/mder-darwin-amd64.tar.gz /build/mder
+
+  build-macos-arm64:
+    image: golang:1.26
+    environment:
+      GOOS: darwin
+      GOARCH: arm64
+      CGO_ENABLED: 0
+    commands:
+      - mkdir -p build
+      - go build -o build/mder .
+      - tar -czf /build/mder-darwin-arm64.tar.gz /build/mder
+
+  prepare-release:
+    image: fedora:latest
+    depends_on:
+      - build-linux-amd64
+      - build-linux-arm64
+      - build-windows-amd64
+      - build-windows-arm64
+      - build-macos-amd64
+      - build-macos-arm64
+    commands:
+      - mkdir -p release
+      - cp build/* release/
+      - ls -lh release/
+      - pwd
+
+  create-release-notes:
+    image: fedora:latest
+    depends_on:
+      - prepare-release
+    commands:
+      - |
+        cat > release/RELEASE_NOTES.md << 'EOF'
+        ## 🚀 Latest development version
+        
+        This is based on the latest auto-build submission: ${CI_COMMIT_SHA}
+        
+        **NOTE**: This is a development version and may contain unstable features.
+        EOF
+
+  create-release:
+    image: codefloe.com/actions/release:v1.0.10
+    depends_on:
+      - prepare-release
+    settings:
+      endpoint: https://codefloe.com
+      access_token:
+        from_secret: CODEFLOE_TOKEN
+      debug: true
+      write_mode: append
+      release_note: release/RELEASE_NOTES.md
+      commit_tag: latest
+      is_prerelease: true
+      attachments:
+        - release/mder.*

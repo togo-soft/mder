@@ -8,7 +8,7 @@ import (
 
 // Logo 头像配置
 type Logo struct {
-	Enabled bool   `yaml:"enabled"` //	显示或隐藏
+	Enabled bool   `yaml:"enabled"` // 显示或隐藏
 	Width   int64  `yaml:"width"`   // 宽度控制
 	Height  int64  `yaml:"height"`  // 高度控制
 	URL     string `yaml:"url"`     // 源url
@@ -77,8 +77,7 @@ type Config struct {
 	CDN         CDN         `yaml:"cdn"`
 	Comment     Comment     `yaml:"comment"`
 	PageConfig  PageConfig  `yaml:"page"`
-	Site        Site        `yaml:"site"`   // 站点配置信息
-	Deploy      Deploy      `yaml:"deploy"` // 部署配置
+	Site        Site        `yaml:"site"` // 站点配置信息
 }
 
 var BaseDir string
@@ -98,16 +97,4 @@ func (c *Config) load() error {
 		return err
 	}
 	return nil
-}
-
-type DeployType string
-
-const (
-	DeployTypeGitHub DeployType = "github"
-	DeployTypeUpyun  DeployType = "upyun"
-)
-
-type Deploy struct {
-	Type      DeployType `yaml:"type"`
-	UpyunAuth string     `yaml:"upyun_auth"`
 }

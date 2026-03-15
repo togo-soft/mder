@@ -33,8 +33,6 @@ func init() {
 	rootCmd.AddCommand(serveCmd())
 	// auto update
 	rootCmd.AddCommand(updateCmd())
-	// deploy project
-	rootCmd.AddCommand(deployCmd())
 }
 
 func main() {
