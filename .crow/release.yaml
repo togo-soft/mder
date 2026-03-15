@@ -17,7 +17,7 @@ steps:
     commands:
       - mkdir -p build
       - go build -o /build/mder .
-      - tar -czf /build/mder-linux-amd64.tar.gz /build/mder
+      - tar -czf build/mder-linux-amd64.tar.gz build/mder
 
   build-linux-arm64:
     image: golang:1.26
@@ -28,7 +28,7 @@ steps:
     commands:
       - mkdir -p build
       - go build -o build/mder .
-      - tar -czf /build/mder-linux-arm64.tar.gz /build/mder
+      - tar -czf build/mder-linux-arm64.tar.gz build/mder
 
   build-windows-amd64:
     image: golang:1.26
@@ -39,7 +39,7 @@ steps:
     commands:
       - mkdir -p build
       - go build -o build/mder .
-      - tar -czf /build/mder-windows-amd64.tar.gz /build/mder
+      - tar -czf build/mder-windows-amd64.tar.gz build/mder
 
   build-windows-arm64:
     image: golang:1.26
@@ -50,7 +50,7 @@ steps:
     commands:
       - mkdir -p build
       - go build -o build/mder .
-      - tar -czf /build/mder-windows-arm64.tar.gz /build/mder
+      - tar -czf build/mder-windows-arm64.tar.gz build/mder
 
   build-macos-amd64:
     image: golang:1.26
@@ -61,7 +61,7 @@ steps:
     commands:
       - mkdir -p build
       - go build -o build/mder .
-      - tar -czf /build/mder-darwin-amd64.tar.gz /build/mder
+      - tar -czf build/mder-darwin-amd64.tar.gz build/mder
 
   build-macos-arm64:
     image: golang:1.26
@@ -72,7 +72,7 @@ steps:
     commands:
       - mkdir -p build
       - go build -o build/mder .
-      - tar -czf /build/mder-darwin-arm64.tar.gz /build/mder
+      - tar -czf build/mder-darwin-arm64.tar.gz build/mder
 
   prepare-release:
     image: fedora:latest
