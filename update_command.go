@@ -51,8 +51,9 @@ func updateCmd() *cobra.Command {
 			}
 
 			current := getCurrentVersion()
-			if current == release.TagName {
-				logger.Info("already latest version", "version", current)
+			currentRevision := getCurrentRevision()
+			if isAlreadyLatest(current, currentRevision, release) {
+				logger.Info("already latest version", "version", current, "revision", currentRevision)
 				return
 			}
 
@@ -76,8 +77,9 @@ func updateCmd() *cobra.Command {
 }
 
 type RepoRelease struct {
-	TagName string         `json:"tag_name"`
-	Assets  []ReleaseAsset `json:"assets"`
+	TagName         string         `json:"tag_name"`
+	TargetCommitish string         `json:"target_commitish"`
+	Assets          []ReleaseAsset `json:"assets"`
 }
 
 type ReleaseAsset struct {
@@ -258,6 +260,46 @@ func getCurrentVersion() string {
 		return "unknown"
 	}
 	return info.Main.Version
+}
+
+func getCurrentRevision() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return ""
+	}
+	for _, setting := range info.Settings {
+		if setting.Key == "vcs.revision" {
+			return setting.Value
+		}
+	}
+	return ""
+}
+
+func isAlreadyLatest(currentVersion, currentRevision string, release *RepoRelease) bool {
+	releaseCommit := normalizeCommitish(release.TargetCommitish)
+	if releaseCommit != "" {
+		currentCommit := normalizeCommitish(currentRevision)
+		if currentCommit != "" {
+			return currentCommit == releaseCommit
+		}
+	}
+	return currentVersion == release.TagName
+}
+
+func normalizeCommitish(commit string) string {
+	commit = strings.TrimSpace(strings.ToLower(commit))
+	if commit == "" {
+		return ""
+	}
+	if len(commit) > 40 {
+		commit = commit[:40]
+	}
+	for _, c := range commit {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return ""
+		}
+	}
+	return commit
 }
 
 func ensureUpdateTargetWritable(executablePath string) error {
