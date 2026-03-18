@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"runtime/debug"
 	"strings"
@@ -31,6 +33,17 @@ func updateCmd() *cobra.Command {
 		Example: "mder update",
 		Aliases: []string{"u"},
 		Run: func(cmd *cobra.Command, args []string) {
+			executablePath, err := os.Executable()
+			if err != nil {
+				logger.Warn("detect executable path failed", "reason", err)
+			} else {
+				logger.Info("update target", "binary", executablePath)
+				if err := ensureUpdateTargetWritable(executablePath); err != nil {
+					logger.Error("update target is not writable", "binary", executablePath, "tmp", selfUpdateTempBinaryPath(executablePath), "reason", err)
+					return
+				}
+			}
+
 			release, err := getRepoLatestRelease()
 			if err != nil {
 				logger.Error("get latest release failed", "reason", err)
@@ -245,4 +258,31 @@ func getCurrentVersion() string {
 		return "unknown"
 	}
 	return info.Main.Version
+}
+
+func ensureUpdateTargetWritable(executablePath string) error {
+	directory := filepath.Dir(executablePath)
+	probePath := filepath.Join(directory, ".mder.update.writecheck")
+
+	file, err := os.OpenFile(probePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := file.WriteString("ok"); err != nil {
+		_ = file.Close()
+		_ = os.Remove(probePath)
+		return err
+	}
+	if err := file.Close(); err != nil {
+		_ = os.Remove(probePath)
+		return err
+	}
+	if err := os.Remove(probePath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+func selfUpdateTempBinaryPath(executablePath string) string {
+	return filepath.Join(filepath.Dir(executablePath), "."+filepath.Base(executablePath)+".new")
 }
