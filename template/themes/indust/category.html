@@ -1,6 +1,7 @@
 <header id="header">
     <a href="/">
-        <div id="logo" style="background-image: url(/{{.SourceVersion}}/images/{{.Config.Logo.Url}});"></div>
+        <div id="logo"
+             style="background-image: url(/{{.SourceVersion}}/images/{{.Config.Logo.Url}});"></div>
         <div id="title">
             <h1>{{print page_name}}</h1>
         </div>
@@ -21,7 +22,8 @@
     <ul class="post-list">
         {{range .PostData}}
         <h2>{{.Key}}</h2>
-        {{range .Posts}}<li class="post-item">
+        {{range .Posts}}
+        <li class="post-item">
             <div class="meta">
                 <time datetime="{{.CreatedAtFormat}}" itemprop="datePublished">{{.CreatedAtFormat}}</time>
             </div>

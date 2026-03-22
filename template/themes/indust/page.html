@@ -1,6 +1,6 @@
 <header id="header">
     <a href="/">
-        <div id="logo" style="background-image: url(/{{.Config.SourceVersion}}/images/{{.Config.Site.LogoName}});"></div>
+        <div id="logo" style="background-image: url(/{{.SourceVersion}}/images/{{.Config.Logo.Url}});"></div>
         <div id="title">
             <h1>{{print page_name}}</h1>
         </div>
@@ -17,8 +17,16 @@
     </div>
 </header>
 
-<article class="post markdown-body" itemscope="" itemtype="http://schema.org/BlogPosting">
-    <div class="content" itemprop="articleBody">
-        {{.Page.MD}}
-    </div>
-</article>
+
+<div class="post-layout">
+    <aside id="outline">
+    </aside>
+    
+    <article class="post markdown-body" itemscope="" itemtype="http://schema.org/BlogPosting">
+        <aside id="outline"></aside>
+        </aside>
+        <div class="content" id="articleBody" itemprop="articleBody">
+            {{.Page.MD}}
+        </div>
+    </article>
+</div>

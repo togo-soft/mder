@@ -1,100 +1,43 @@
-<div id="header-post">
-    <a id="menu-icon" href="#" class=""><i class="fas fa-bars fa-lg"></i></a>
-    <a id="menu-icon-tablet" href="#" class=""><i class="fas fa-bars fa-lg"></i></a>
-    <a id="top-icon-tablet" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"
-        style="display:none;"><i class="fas fa-chevron-up fa-lg"></i></a>
-    <span id="menu" style="visibility: hidden;">
-        <span id="nav">
-            <ul>
-                <li><a href="/">
-                        <font style="vertical-align: inherit;">Home </font>
-                    </a></li>
-                <li><a href="/archives.html">
-                        <font style="vertical-align: inherit;">Articles </font>
-                    </a></li>
-            </ul>
-        </span>
-        <br>
-        <span id="actions">
-            <ul>
-                <li><a class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i
-                            class="fas fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();"
-                            onmouseout="$('#i-top').toggle();"></i></a></li>
-            </ul>
-            <span id="i-top" class="info" style="display:none;">
-                <font style="vertical-align: inherit;">返回顶部 </font>
-            </span>
-        </span>
-        <br>
-        <div id="toc">
-            {{.Post.TOC}}
-        </div>
-    </span>
-</div>
+<div class="post-layout">
+    <aside id="outline">
+    </aside>
+    
+    <div class="post-main">
+        <article class="post markdown-body" itemscope="" itemtype="http://schema.org/BlogPosting">
+            <header>
+                <h1 class="posttitle" itemprop="name headline">
+                    {{.Post.Title}}
+                </h1>
 
-<article class="post markdown-body" itemscope="" itemtype="http://schema.org/BlogPosting">
-    <header>
-        <h1 class="posttitle" itemprop="name headline">
-            {{.Post.Title}}
-        </h1>
+                <div class="meta">
+                    <span class="author" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+                        <span itemprop="name">{{.Config.Site.Author}}</span>
+                    </span>
 
-        <div class="meta">
-            <span class="author" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
-                <span itemprop="name">{{.Config.Person.Author}}</span>
-            </span>
+                    <div class="postdate">
+                        <time datetime={{.Post.CreatedAtFormat}} itemprop="datePublished">{{.Post.CreatedAtFormat}}</time>
+                        (Updated:
+                        <time datetime={{.Post.UpdatedAtFormat}} itemprop="dateModified">{{.Post.UpdatedAtFormat}}</time>
+                        )
+                    </div>
 
-            <div class="postdate">
-                <time datetime={{.Post.CreatedAtFormat}} itemprop="datePublished">{{.Post.CreatedAtFormat}}</time>
-                (Updated:
-                <time datetime={{.Post.UpdatedAtFormat}} itemprop="dateModified">{{.Post.UpdatedAtFormat}}</time>)
+                    <div class="article-category">
+                        <i class="fas fa-archive"></i>
+                        <a class="category-link" href="/category/{{.Post.Category}}.html">{{.Post.Category}}</a>
+                    </div>
+
+                    <div class="article-tag">
+                        <i class="fas fa-tag"></i>
+                        {{range .Post.Tags}}
+                        <a class="tag-link" href="/tags/{{.}}.html">{{.}}</a><span>,</span>
+                        {{end}}
+                    </div>
+                </div>
+            </header>
+
+            <div class="content" id="articleBody" itemprop="articleBody">
+                {{.Post.MD}}
             </div>
-
-            <div class="article-category">
-                <i class="fas fa-archive"></i>
-                <a class="category-link" href="/category/{{.Post.Category}}.html">{{.Post.Category}}</a>
-            </div>
-
-            <div class="article-tag">
-                <i class="fas fa-tag"></i>
-                {{range .Post.Tags}}
-                <a class="tag-link" href="/tags/{{.}}.html">{{.}}</a><span>,</span>
-                {{end}}
-            </div>
-        </div>
-    </header>
-
-    <div class="content" itemprop="articleBody">
-        {{.Post.MD}}
-    </div>
-</article>
-
-<div class="blog-post-comments">
-    <div id="disqus_thread">
-        <!-- <noscript>Please enable JavaScript to view the comments.</noscript> -->
-    </div>
-</div>
-
-<div id="footer-post-container">
-    <div id="footer-post">
-        <div id="nav-footer" style="display: none">
-            <ul>
-                <li><a href="/">Home</a></li>
-                <li><a href="/about.html">About</a></li>
-                <li><a href="/archives.html">Writing</a></li>
-            </ul>
-        </div>
-
-        <div id="toc-footer" style="display: none">
-            {{.Post.TOC}}
-        </div>
-
-        <div id="actions-footer">
-            <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i
-                    class="fas fa-bars fa-lg" aria-hidden="true"></i> Menu</a>
-            <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i
-                    class="fas fa-list fa-lg" aria-hidden="true"></i> TOC</a>
-            <a id="top" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i
-                    class="fas fa-chevron-up fa-lg" aria-hidden="true"></i> Top</a>
-        </div>
+        </article>
     </div>
 </div>

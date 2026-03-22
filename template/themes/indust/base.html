@@ -5,47 +5,77 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/font-awesome/6.0.0/css/all.min.css" type="text/css" rel="stylesheet" />
-    <link rel="stylesheet" href="/{{.Config.SourceVersion}}/css/markdown.css">
-    <link rel="stylesheet" href="/{{.Config.SourceVersion}}/css/cactus.css">
-    <link rel="stylesheet" href="/{{.Config.SourceVersion}}/css/prism.css">
-    <link rel="stylesheet" href="/{{.Config.SourceVersion}}/css/indust.css">
-    <link href="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-M/hack-font/3.003/web/hack.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/firacode/6.2.0/fira_code.min.css">
-    <link rel="shortcut icon" href="/{{.Config.SourceVersion}}/images/favicon.ico">
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
+    <link rel="stylesheet" href="/{{.SourceVersion}}/css/markdown.css">
+    <link rel="stylesheet" href="/{{.SourceVersion}}/css/cactus.css">
+    <link rel="stylesheet" href="/{{.SourceVersion}}/css/prism.css">
+    <link rel="stylesheet" href="/{{.SourceVersion}}/css/indust.css">
+    <link href="https://cdn.bootcdn.net/ajax/libs/hack-font/3.3.0/web/hack.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/firacode/6.2.0/fira_code.min.css" />
+    <link href="https://cdn.jsdelivr.net/gh/yaohaixiao/outline.js/outline.min.css" rel="stylesheet" />
+    <link rel="shortcut icon" href="/{{.SourceVersion}}/images/{{.Config.Logo.Favicon}}">
     <meta name="generator" content="mder 0.0.1">
-    <meta name="keywords" content="{{.Config.Seo.Keywords}}">
-    <meta name="description" content="{{.Config.Seo.Description}}">
+    <meta name="keywords" content="{{.Config.Site.Keywords}}">
+    <meta name="description" content="{{.Config.Site.Description}}">
     <title>{{print title}}</title>
 </head>
 
 <body class="max-width mx-auto px3 ltr">
-    <div class="content index py4">
-        {{layout_placeholder}}
-        <footer id="footer">
-            <div class="footer-left">
-                © {{.Config.Now.UTC.Year}} <i class="fas fa-heart"></i>
-                {{.Config.Person.Author}}
-                {{if .Config.Site.IcpEnable}}
-                <a href="{{.Config.Site.IcpLink}}" target="_blank">{{.Config.Site.IcpName}}</a>
-                {{end}}
-            </div>
-            {{if .Config.Site.CdnEnable}}
-            <div class="footer-right">
-                本网站由
-                <a href="{{.Config.Site.CdnLink}}" target="_blank">
-                    <img class="img-response" src="/{{.Config.SourceVersion}}/images/{{.Config.Site.CdnImage}}" alt="cdn image">
-                </a>
-                提供CDN加速/云存储服务
-            </div>
+<div class="content index py4">
+    {{layout_placeholder}}
+    <footer id="footer">
+        © {{.Now.UTC.Year}} <i class="fas fa-heart"></i>
+            {{.Config.Site.Author}}
+            {{if .Config.ICP.Enabled}}
+            <a href="{{.Config.ICP.Url}}" target="_blank">{{.Config.ICP.Text}}</a>
             {{end}}
-        </footer>
-    </div>
-    <script src="https://cdn.staticfile.org/jquery/3.4.1/jquery.min.js"></script>
-    <script src="https://cdn.staticfile.org/justifiedGallery/3.7.0/js/jquery.justifiedGallery.min.js"></script>
-    <script src="https://cdn.staticfile.org/clipboard.js/2.0.6/clipboard.min.js"></script>
-    <script src="/{{.Config.SourceVersion}}/js/main.js"></script>
-    <script src="/{{.Config.SourceVersion}}/js/prism.js"></script>
+        {{if .Config.CDN.Enabled}}
+        Provides CDN and OBS by
+            <a href="{{.Config.CDN.Url}}" target="_blank">{{.Config.CDN.Text}}</a>
+        {{end}}
+    </footer>
+</div>
+<script src="https://cdn.jsdelivr.net/gh/yaohaixiao/outline.js/outline.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 只在文章页面初始化大纲
+        if (document.querySelector('#articleBody')) {
+            const outline = new Outline({
+                // 设置大纲位置为粘性定位
+                position: 'sticky',
+                // 设置粘性定位的顶部距离
+                stickyHeight: 20,
+                // 设置大纲容器
+                parentElement: '#outline',
+                // 设置文章内容元素
+                articleElement: '#articleBody',
+                // 设置网站首页链接
+                homepage: '/',
+                // 设置大纲标题
+                title: '目录',
+                // 设置是否自动展开
+                isAutoExpand: true,
+                // 设置标题选择器，确保能够正确识别所有级别的标题
+                selector: 'h1,h2,h3,h4,h5,h6'
+            });
+        }
+    });
+</script>
+<script src="https://cdn.staticfile.org/clipboard.js/2.0.6/clipboard.min.js"></script>
+<script src="/{{.SourceVersion}}/js/prism.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const navToggle = document.querySelector('#nav .icon a');
+        const navMenu = document.querySelector('#nav ul');
+
+        if (navToggle && navMenu) {
+            navToggle.addEventListener('click', function(e) {
+                e.preventDefault(); // 阻止链接默认行为
+                navMenu.classList.toggle('responsive');
+            });
+        }
+    });
+</script>
 </body>
 
 </html>

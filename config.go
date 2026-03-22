@@ -6,20 +6,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Logo 头像配置
 type Logo struct {
-	Enabled bool   `yaml:"enabled"` // 显示或隐藏
-	Width   int64  `yaml:"width"`   // 宽度控制
-	Height  int64  `yaml:"height"`  // 高度控制
-	URL     string `yaml:"url"`     // 源url
+	Enabled bool   `yaml:"enabled"`
+	Width   int64  `yaml:"width"`
+	Height  int64  `yaml:"height"`
+	Url     string `yaml:"url"`
+	Favicon string `yaml:"favicon"`
 }
 
-// Favicon 自定义favicon
-type Favicon struct {
-	URL string `yaml:"url"`
-}
-
-// SocialLinks 社交媒体链接
 type SocialLinks struct {
 	Github   string `yaml:"github"`
 	Email    string `yaml:"email"`
@@ -29,61 +23,55 @@ type SocialLinks struct {
 	Telegram string `yaml:"telegram"`
 }
 
-// ICP 备案配置
 type ICP struct {
-	Enabled bool   `yaml:"enabled"` // 显示或隐藏
-	URL     string `yaml:"url"`     // 重定向地址
-	Text    string `yaml:"text"`    // 内容
+	Enabled bool   `yaml:"enabled"`
+	Url     string `yaml:"url"`
+	Text    string `yaml:"text"`
 }
 
-// CDN 厂商信息
 type CDN struct {
 	Enabled bool   `yaml:"enabled"`
-	URL     string `yaml:"url"`
+	Url     string `yaml:"url"`
 	Image   string `yaml:"image"`
 	Text    string `yaml:"text"`
 }
 
-// Comment 评论功能
 type Comment struct {
 	Enabled bool `yaml:"enabled"`
 }
 
-// Site 站点配置
 type Site struct {
-	Title       string `yaml:"title"`       // 网站标题
-	Subtitle    string `yaml:"subtitle"`    // 副标题
-	Description string `yaml:"description"` // 描述
-	Keywords    string `yaml:"keywords"`    // 关键字
-	Author      string `yaml:"author"`      // 您的名字
-	Summary     string `yaml:"summary"`     // 个人总结
-	Theme       string `yaml:"theme"`       // 主题
+	Title       string `yaml:"title"`
+	Subtitle    string `yaml:"subtitle"`
+	Description string `yaml:"description"`
+	Keywords    string `yaml:"keywords"`
+	Author      string `yaml:"author"`
+	Summary     string `yaml:"summary"`
+	Theme       string `yaml:"theme"`
 }
 
-// PageConfig 页面配置
 type PageConfig struct {
-	Paginate    bool  `yaml:"paginate"` // 是否开启分页
-	Size        int64 `yaml:"size"`     // 每页数
-	Total       int   // 页总数
-	CurrentSize int   // 当前页数
+	Paginate    bool  `yaml:"paginate"`
+	Size        int64 `yaml:"size"`
+	Total       int
+	CurrentSize int
 }
 
-// Config 配置文件
 type Config struct {
-	Logo        Logo        `yaml:"logo"`
-	Favicon     Favicon     `yaml:"favicon"`
-	SocialLinks SocialLinks `yaml:"social_links"`
-	ICP         ICP         `yaml:"icp"`
-	CDN         CDN         `yaml:"cdn"`
-	Comment     Comment     `yaml:"comment"`
-	PageConfig  PageConfig  `yaml:"page"`
-	Site        Site        `yaml:"site"` // 站点配置信息
+	Logo          Logo        `yaml:"logo"`
+	SocialLinks   SocialLinks `yaml:"social_links"`
+	ICP           ICP         `yaml:"icp"`
+	CDN           CDN         `yaml:"cdn"`
+	Comment       Comment     `yaml:"comment"`
+	PageConfig    PageConfig  `yaml:"page"`
+	Site          Site        `yaml:"site"`
+	SourceVersion string      `yaml:"-"`
 }
 
 var BaseDir string
 
 func (c *Config) load() error {
-	var file = "config.yaml"
+	file := "config.yaml"
 	if BaseDir != "" {
 		file = BaseDir + "/config.yaml"
 	}
@@ -95,6 +83,9 @@ func (c *Config) load() error {
 	if err := yaml.Unmarshal(configBuffer, c); err != nil {
 		logger.Error("read config file failed", "reason", err)
 		return err
+	}
+	if c.Logo.Favicon == "" {
+		c.Logo.Favicon = "favicon.ico"
 	}
 	return nil
 }

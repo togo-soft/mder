@@ -679,7 +679,7 @@ body {
 }
 
 .max-width {
-    max-width: 48rem;
+    max-width: 52rem;
 }
 
 @media (max-width: 480px) {
@@ -996,7 +996,7 @@ body {
     color: #d480aa;
 }
 
-#header-post #toc .toc-level-1>.toc-link {
+#header-post #toc .toc-level-1 > .toc-link {
     display: none;
 }
 
@@ -1203,7 +1203,7 @@ body {
     color: #d480aa;
 }
 
-#footer-post #toc-footer .toc-level-1>.toc-link {
+#footer-post #toc-footer .toc-level-1 > .toc-link {
     display: none;
 }
 
@@ -1260,7 +1260,7 @@ body {
     margin-right: 16px;
     min-width: 100px;
     color: #666;
-    font-size: 14px;
+    font-size: 18px;
 }
 
 @media (min-width: 480px) {
@@ -1306,7 +1306,6 @@ article header .meta * {
 }
 
 article header .author {
-    text-transform: uppercase;
     letter-spacing: 0.01em;
     font-weight: 700;
 }
@@ -1356,7 +1355,7 @@ article .content blockquote {
     padding: 0.5em 10px;
     background: inherit;
     color: #2bbc8a;
-    quotes: "\201C""\201D""\2018""\2019";
+    quotes: "\201C" "\201D" "\2018" "\2019";
     font-weight: bold;
 }
 
@@ -1487,11 +1486,12 @@ article .content .caption {
 }
 
 .blog-post-comments {
-    margin-top: 4rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
 }
 
 #footer {
-    position: absolute;
+    /* position: absolute; */
     bottom: 0;
     margin-bottom: 10px;
     width: 100%;
@@ -1526,42 +1526,6 @@ article .content .caption {
 
 #footer li:last-child a {
     margin-right: 0;
-}
-
-#footer a {
-    color: #666;
-    text-decoration: underline;
-    background-image: none;
-}
-
-#footer a:hover {
-    color: #858585;
-}
-
-#footer .footer-left {
-    height: 20px;
-    vertical-align: middle;
-    line-height: 20px;
-}
-
-@media (min-width: 39rem) {
-    #footer {
-        display: flex;
-        flex-flow: row wrap;
-        justify-content: space-between;
-        align-items: center;
-        align-content: center;
-        margin-bottom: 20px;
-    }
-
-    #footer .footer-left {
-        align-self: flex-start;
-        margin-right: 20px;
-    }
-
-    #footer .footer-right {
-        align-self: flex-end;
-    }
 }
 
 .pagination {

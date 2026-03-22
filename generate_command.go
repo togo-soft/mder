@@ -341,7 +341,11 @@ func (g *Generator) loadConfig() error {
 	if g.Config == nil {
 		g.Config = new(Config)
 	}
-	return g.Config.load()
+	if err := g.Config.load(); err != nil {
+		return err
+	}
+	g.Config.SourceVersion = g.SourceVersion
+	return nil
 }
 
 // generate 文件生成

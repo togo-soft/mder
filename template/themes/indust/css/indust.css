@@ -15,6 +15,15 @@ body {
     }
 }
 
+#writing {
+    font-size: 18px;
+    line-height: 28.8px;
+}
+
+#writing,projects ul li {
+    margin-bottom: 14px;
+}
+
 #links ul {
     margin: 0;
     padding: 0;
@@ -75,7 +84,7 @@ body {
 }
 
 .markdown-body {
-    font-family: Hack,'LXGW WenKai Screen', sans-serif, monospace !important;
+    font-family: Hack, 'LXGW WenKai Screen', sans-serif, monospace !important;
 }
 
 body h2,
@@ -115,4 +124,249 @@ body table {
 
 #links {
     overflow-x: hidden;
+}
+
+::backdrop,
+:root {
+    --standard-border-radius: 5px;
+    --bg: #EEEEEE;
+    --bg-light: #CBCDCD;
+    --text: #41474E;
+    --text-light: #646868;
+    --accent: #D26878;
+    --accent-light: #e08f67;
+    --accent-text: var(--bg);
+    --border: #646868;
+    --link: #2bbc8a
+}
+
+a,
+a:visited {
+    text-decoration: none;
+    border-radius: .125rem;
+    color: var(--link)
+}
+
+a:hover {
+    background-color: var(--link);
+    color: var(--bg)
+}
+
+content h1,
+content h2,
+content h3,
+content h4,
+content h5,
+content h6 {
+    margin: .5em 0;
+}
+
+content h1::before,
+content h2::before,
+content h3::before,
+content h4::before,
+content h5::before,
+content h6::before {
+    color: var(--accent);
+    content: '# ';
+}
+
+#outline {
+    position: fixed;
+    left: max(1rem, calc((100% - 1000px) / 2 - 220px));
+    top: 20px;
+    width: 220px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    font-size: 0.9rem;
+    padding-right: 1rem;
+}
+
+/* 调整整体内容区域 */
+.content.index {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+    position: relative;
+}
+
+.content #about p {
+    font-family: Hack, 'LXGW WenKai Screen', sans-serif, monospace !important;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+/* 文章页面布局 */
+.post-layout {
+    position: relative;
+}
+
+/* 左侧大纲样式 */
+#outline {
+    position: fixed;
+    left: max(1rem, calc((100% - 1000px) / 2 - 220px));
+    top: 20px;
+    width: 220px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    font-size: 0.9rem;
+    padding-right: 1rem;
+}
+
+/* 文章主体内容 */
+.post-main {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* 在中等屏幕上调整布局 */
+@media screen and (max-width: 1400px) {
+    #outline {
+        left: 1rem;
+    }
+}
+
+/* 在小屏幕上隐藏大纲并调整文章宽度 */
+@media screen and (max-width: 1200px) {
+    #outline {
+        display: none;
+    }
+    
+    .post-main {
+        padding: 0;
+    }
+}
+
+/* 在小屏幕上调整页脚布局 */
+@media screen and (max-width: 768px) {
+    #footer {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.5rem;
+    }
+}
+
+/* Footer 样式 */
+#footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    color: #666;
+    font-size: 14px;
+    border-top: 1px solid var(--border);
+    text-align: left;  /* 改为左对齐 */
+}
+
+#footer ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;  /* 使用flex布局 */
+    flex-wrap: wrap;  /* 允许换行 */
+    gap: 15px;  /* 项目之间的间距 */
+}
+
+#footer li {
+    display: inline-block;
+    border-right: 1px solid #666;
+    padding-right: 15px;
+}
+
+#footer li:last-child {
+    border-right: 0;
+    padding-right: 0;
+}
+
+/* #footer a {
+    color: #666;
+    text-decoration: none;
+}
+
+#footer a:hover {
+    color: var(--link);
+    background: none;
+} */
+
+/* 响应式调整 */
+@media screen and (max-width: 768px) {
+    #footer {
+        text-align: center;
+        padding: 1rem;
+    }
+    
+    #footer ul {
+        justify-content: center;
+    }
+}
+
+#nav-menu {
+    display: none;
+    flex-direction: column;
+    list-style: none;
+    padding: 0;
+}
+
+#nav-menu.is-active {
+    display: flex;
+}
+
+#nav-toggle {
+    display: none;
+    cursor: pointer;
+}
+
+@media screen and (max-width: 768px) {
+    #nav-toggle {
+        display: block;
+    }
+
+    #nav-menu {
+        display: none;
+    }
+}
+
+/* 导航栏样式 */
+#nav ul {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+    line-height: 15px;
+}
+
+#nav ul li {
+    display: inline-block;
+    margin-right: 15px;
+    vertical-align: middle;
+}
+
+#nav ul li.icon {
+    display: none;
+}
+
+@media screen and (max-width: 768px) {
+    #nav ul li:not(.icon) {
+        display: none;
+    }
+
+    #nav ul li.icon {
+        display: inline-block;
+        position: absolute;
+        right: 1rem;
+        top: 1rem;
+    }
+
+    #nav ul.responsive {
+        position: relative;
+    }
+
+    #nav ul.responsive li {
+        display: block;
+        padding: 10px 0;
+    }
+
+    #nav ul.responsive li.icon {
+        position: absolute;
+        right: 1rem;
+        top: 1rem;
+    }
 }
