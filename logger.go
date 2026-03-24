@@ -11,7 +11,7 @@ var logger *slog.Logger
 
 func init() {
 	slogOpts := &slog.HandlerOptions{
-		AddSource: true,
+		AddSource: false,
 		Level:     slog.LevelDebug,
 	}
 	opts := &devslog.Options{
