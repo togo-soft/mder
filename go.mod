@@ -9,7 +9,7 @@ require (
 	github.com/minio/selfupdate v0.6.0
 	github.com/radovskyb/watcher v1.0.7
 	github.com/spf13/cobra v1.10.2
-	github.com/yuin/goldmark v1.8.1
+	github.com/yuin/goldmark v1.8.2
 	github.com/yuin/goldmark-emoji v1.0.6
 	github.com/yuin/goldmark-meta v1.1.0
 	go.abhg.dev/goldmark/mermaid v0.6.0

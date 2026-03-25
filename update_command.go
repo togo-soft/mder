@@ -63,13 +63,14 @@ func updateCmd() *cobra.Command {
 				return
 			}
 
-			logger.Info("updating mder", "from", current, "to", release.TagName, "asset", asset.Name)
+			releaseCommit := releaseCommitForLog(release)
+			logger.Info("updating mder", "from", current, "to", release.TagName, "commit", releaseCommit, "asset", asset.Name)
 			if err := applyBinaryUpdate(asset.BrowserDownloadURL, asset.Name); err != nil {
 				logger.Error("update failed", "reason", err, "asset", asset.Name)
 				return
 			}
 
-			logger.Info("mder update success", "version", release.TagName)
+			logger.Info("mder update success", "version", release.TagName, "commit", releaseCommit)
 		},
 	}
 
@@ -298,6 +299,20 @@ func normalizeCommitish(commit string) string {
 		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
 			return ""
 		}
+	}
+	return commit
+}
+
+func releaseCommitForLog(release *RepoRelease) string {
+	if release == nil {
+		return "unknown"
+	}
+	commit := normalizeCommitish(release.TargetCommitish)
+	if commit == "" {
+		return "unknown"
+	}
+	if len(commit) > 12 {
+		return commit[:12]
 	}
 	return commit
 }
