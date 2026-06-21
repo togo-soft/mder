@@ -24,6 +24,6 @@ func init() {
 		StringerFormatter: true,
 	}
 
-	logger = slog.New(devslog.NewHandler(os.Stdout, opts))
+	logger = slog.New(devslog.NewHandler(os.Stderr, opts))
 	slog.SetDefault(logger)
 }

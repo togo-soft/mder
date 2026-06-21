@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -11,7 +12,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/spf13/cobra"
+	"github.com/urfave/cli/v3"
 	meta "github.com/yuin/goldmark-meta"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
@@ -20,59 +21,48 @@ import (
 	"codeberg.org/mder/mder/internal"
 )
 
-func generateCmd() *cobra.Command {
-	var startAt time.Time
-	var gen = newGenerator()
-	var path string
-	cmd := &cobra.Command{
-		Use:     "generate",
+func generateCmd() *cli.Command {
+	return &cli.Command{
+		Name:    "generate",
 		Aliases: []string{"g"},
-		Short:   "generate project to dist folder",
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if path != "" {
-				BaseDir = strings.TrimSuffix(path, "/")
-			}
-			startAt = time.Now()
-			// 读取配置文件
-			if err := gen.loadConfig(); err != nil {
-				logger.Error("load config file failed", "reason", err)
-				return err
-			}
-			return nil
+		Usage:   "generate project to dist folder",
+		Flags: []cli.Flag{
+			&cli.StringFlag{Name: "path", Value: ".", Usage: "mder project path"},
 		},
-		Run: func(cmd *cobra.Command, args []string) {
-			// 读取资源文件
-			dataSource, err := internal.GetDataSource(BaseDir)
-			if err != nil {
-				logger.Error("get data source failed", "reason", err)
-				return
-			}
-			gen.DataSource = dataSource
-			// 读取主题模板文件
-			if err := gen.readTheme(gen.Config.Site.Theme); err != nil {
-				logger.Error("read theme source failed", "reason", err)
-				return
-			}
-			// 读取页面列表
-			if err := gen.readAllPages(); err != nil {
-				logger.Error("read page source failed", "reason", err)
-				return
-			}
-			// 读取文章列表
-			if err := gen.readAllPosts(); err != nil {
-				logger.Error("read post source failed", "reason", err)
-				return
-			}
-			// 数据写入模板文件
-			gen.generate()
-		},
-		PostRun: func(cmd *cobra.Command, args []string) {
-			endAt := time.Since(startAt)
-			logger.Info("generate success", "cost", endAt.String())
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			return runGenerate(cmd.String("path"))
 		},
 	}
-	cmd.Flags().StringVar(&path, "path", ".", "mder project path")
-	return cmd
+}
+
+func runGenerate(path string) error {
+	startAt := time.Now()
+	if path != "" {
+		BaseDir = strings.TrimSuffix(path, "/")
+	}
+	gen := newGenerator()
+	if err := gen.loadConfig(); err != nil {
+		return fmt.Errorf("load config file: %w", err)
+	}
+	dataSource, err := internal.GetDataSource(BaseDir)
+	if err != nil {
+		return fmt.Errorf("get data source: %w", err)
+	}
+	gen.DataSource = dataSource
+	if err := gen.readTheme(gen.Config.Site.Theme); err != nil {
+		return fmt.Errorf("read theme source: %w", err)
+	}
+	if err := gen.readAllPages(); err != nil {
+		return fmt.Errorf("read page source: %w", err)
+	}
+	if err := gen.readAllPosts(); err != nil {
+		return fmt.Errorf("read post source: %w", err)
+	}
+	if err := gen.generate(); err != nil {
+		return fmt.Errorf("generate site: %w", err)
+	}
+	logger.Info("generate success", "cost", time.Since(startAt).String())
+	return nil
 }
 
 // readAllPosts 读取所有post文章
@@ -349,23 +339,36 @@ func (g *Generator) loadConfig() error {
 }
 
 // generate 文件生成
-func (g *Generator) generate() {
+func (g *Generator) generate() error {
 	// 清理dist目录
 	if err := g.clearDistDirectory(); err != nil {
-		logger.Error("clear dist directory failed", "reason", err)
-		return
+		return fmt.Errorf("clear dist directory: %w", err)
 	}
 	if err := g.sourceCopy(); err != nil {
-		logger.Error("copy theme source to dist failed", "reason", err)
-		return
+		return fmt.Errorf("copy theme source to dist: %w", err)
 	}
-	_ = g.generateIndex()
-	g.generatePosts(g.Posts, "")
-	g.generatePosts(g.DraftPosts, "draft")
-	g.generatePage()
-	g.generateArchives()
-	g.generateTags()
-	g.generateCategories()
+	if err := g.generateIndex(); err != nil {
+		return err
+	}
+	if err := g.generatePosts(g.Posts, ""); err != nil {
+		return err
+	}
+	if err := g.generatePosts(g.DraftPosts, "draft"); err != nil {
+		return err
+	}
+	if err := g.generatePage(); err != nil {
+		return err
+	}
+	if err := g.generateArchives(); err != nil {
+		return err
+	}
+	if err := g.generateTags(); err != nil {
+		return err
+	}
+	if err := g.generateCategories(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // clearDistDirectory 清理dist目录
@@ -481,7 +484,7 @@ func (g *Generator) generateIndex() error {
 	return nil
 }
 
-func (g *Generator) generatePosts(posts []*Post, fixedOutputDir string) {
+func (g *Generator) generatePosts(posts []*Post, fixedOutputDir string) error {
 	postTemplate := template.New("post")
 	var postBuffer = new(bytes.Buffer)
 	for _, post := range posts {
@@ -499,13 +502,11 @@ func (g *Generator) generatePosts(posts []*Post, fixedOutputDir string) {
 		postTemplate.Funcs(funcMap)
 		postTemplate, err := postTemplate.Parse(string(g.Theme.PostLayout))
 		if err != nil {
-			logger.Error("generate post page failed", "reason", err)
-			return
+			return fmt.Errorf("parse post layout: %w", err)
 		}
 		// 入buffer
 		if err := postTemplate.Execute(postBuffer, instance); err != nil {
-			logger.Error("generate post page failed", "reason", err)
-			return
+			return fmt.Errorf("execute post layout: %w", err)
 		}
 		// buffer写文件
 		outputDir := fixedOutputDir
@@ -514,18 +515,18 @@ func (g *Generator) generatePosts(posts []*Post, fixedOutputDir string) {
 		}
 		var catDir = fmt.Sprintf(BaseDir+"/dist/%s", outputDir)
 		if err := g.createDir(catDir); err != nil {
-			return
+			return err
 		}
 		var filename = fmt.Sprintf("%s/%s.html", catDir, post.FileBasename)
 		if err := os.WriteFile(filename, postBuffer.Bytes(), os.ModePerm); err != nil {
-			logger.Error("write file failed", "reason", err)
-			return
+			return fmt.Errorf("write post file: %w", err)
 		}
 		postBuffer.Reset()
 	}
+	return nil
 }
 
-func (g *Generator) generatePage() {
+func (g *Generator) generatePage() error {
 	pageTemplate := template.New("page")
 	var pageBuffer = new(bytes.Buffer)
 	for _, page := range g.Pages {
@@ -543,25 +544,23 @@ func (g *Generator) generatePage() {
 		pageTemplate.Funcs(funcMap)
 		pageTemplate, err := pageTemplate.Parse(string(g.Theme.PageLayout))
 		if err != nil {
-			logger.Error("generate page page failed", "reason", err)
-			return
+			return fmt.Errorf("parse page layout: %w", err)
 		}
 		// 入buffer
 		if err := pageTemplate.Execute(pageBuffer, instance); err != nil {
-			logger.Error("generate page page failed", "reason", err)
-			return
+			return fmt.Errorf("execute page layout: %w", err)
 		}
 		// buffer写文件
 		var filename = fmt.Sprintf(BaseDir+"/dist/%s.html", page.Link)
 		if err := os.WriteFile(filename, pageBuffer.Bytes(), os.ModePerm); err != nil {
-			logger.Error("write page content failed", "reason", err)
-			return
+			return fmt.Errorf("write page content: %w", err)
 		}
 		pageBuffer.Reset()
 	}
+	return nil
 }
 
-func (g *Generator) generateArchives() {
+func (g *Generator) generateArchives() error {
 	archiveTemplate := template.New("archive")
 	var archiveBuffer = new(bytes.Buffer)
 	// 按时间归档
@@ -602,44 +601,42 @@ func (g *Generator) generateArchives() {
 	archiveTemplate.Funcs(funcMap)
 	archiveTemplate, err := archiveTemplate.Parse(string(g.Theme.ArchiveLayout))
 	if err != nil {
-		logger.Error("generate archive page failed", "reason", err)
-		return
+		return fmt.Errorf("parse archive layout: %w", err)
 	}
 
 	// 入buffer
 	if err := archiveTemplate.Execute(archiveBuffer, instance); err != nil {
-		logger.Error("generate archive page failed", "reason", err)
-		return
+		return fmt.Errorf("execute archive layout: %w", err)
 	}
 	// buffer写文件
 	var filename = fmt.Sprintf(BaseDir+"/dist/%s.html", instance.Page.Link)
 	if err := os.WriteFile(filename, archiveBuffer.Bytes(), os.ModePerm); err != nil {
-		logger.Error("write archive page failed", "reason", err)
-		return
+		return fmt.Errorf("write archive page: %w", err)
 	}
 	archiveBuffer.Reset()
+	return nil
 }
 
-func (g *Generator) generateTags() {
+func (g *Generator) generateTags() error {
 	tagGroups := make(map[string][]*Post)
 	for _, post := range g.Posts {
 		for _, tag := range post.Tags {
 			tagGroups[tag] = append(tagGroups[tag], post)
 		}
 	}
-	g.generateGroupedArchive("tags", g.Theme.TagLayout, tagGroups, "tags")
+	return g.generateGroupedArchive("tags", g.Theme.TagLayout, tagGroups, "tags")
 }
 
-func (g *Generator) generateCategories() {
+func (g *Generator) generateCategories() error {
 	catGroups := make(map[string][]*Post)
 	for _, post := range g.Posts {
 		catGroups[post.Category] = append(catGroups[post.Category], post)
 	}
 	catGroups["draft"] = g.DraftPosts
-	g.generateGroupedArchive("categories", g.Theme.CategoryLayout, catGroups, "category")
+	return g.generateGroupedArchive("categories", g.Theme.CategoryLayout, catGroups, "category")
 }
 
-func (g *Generator) generateGroupedArchive(templateName string, layout []byte, groups map[string][]*Post, outputDir string) {
+func (g *Generator) generateGroupedArchive(templateName string, layout []byte, groups map[string][]*Post, outputDir string) error {
 	tmpl := template.New(templateName)
 	var buf bytes.Buffer
 
@@ -682,28 +679,26 @@ func (g *Generator) generateGroupedArchive(templateName string, layout []byte, g
 		tmpl.Funcs(funcMap)
 		tmpl, err := tmpl.Parse(string(layout))
 		if err != nil {
-			logger.Error("generate "+templateName+" page failed", "reason", err)
-			return
+			return fmt.Errorf("parse %s layout: %w", templateName, err)
 		}
 
 		// 入buffer
 		if err := tmpl.Execute(&buf, instance); err != nil {
-			logger.Error("generate "+templateName+" page failed", "reason", err)
-			return
+			return fmt.Errorf("execute %s layout: %w", templateName, err)
 		}
 		// 创建目录
 		dir := BaseDir + "/dist/" + outputDir
 		if err := g.createDir(dir); err != nil {
-			return
+			return err
 		}
 		// buffer写文件
 		filename := fmt.Sprintf("%s/%s.html", dir, instance.Page.Link)
 		if err := os.WriteFile(filename, buf.Bytes(), os.ModePerm); err != nil {
-			logger.Error("write "+templateName+" content failed", "reason", err)
-			return
+			return fmt.Errorf("write %s content: %w", templateName, err)
 		}
 		buf.Reset()
 	}
+	return nil
 }
 
 type PostContext struct {

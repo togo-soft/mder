@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/goccy/go-yaml"
@@ -77,12 +78,10 @@ func (c *Config) load() error {
 	}
 	configBuffer, err := os.ReadFile(file)
 	if err != nil {
-		logger.Error("read config file failed", "reason", err)
-		return err
+		return fmt.Errorf("read config file %s: %w", file, err)
 	}
 	if err := yaml.Unmarshal(configBuffer, c); err != nil {
-		logger.Error("read config file failed", "reason", err)
-		return err
+		return fmt.Errorf("parse config file %s: %w", file, err)
 	}
 	if c.Logo.Favicon == "" {
 		c.Logo.Favicon = "favicon.ico"

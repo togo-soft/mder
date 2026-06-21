@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -38,7 +39,7 @@ func GetDataSource(dir string) (DataSource, error) {
 		filename := entry.Name()[:len(entry.Name())-len(filepath.Ext(entry.Name()))]
 		dataItems, err := ReadYamlToDataItems(filepath.Join(dir, entry.Name()))
 		if err != nil {
-			panic("read data source file failed: " + err.Error())
+			return nil, fmt.Errorf("read data source file %s: %w", entry.Name(), err)
 		}
 		datasource[filename] = dataItems
 	}

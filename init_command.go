@@ -1,43 +1,47 @@
 package main
 
 import (
+	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"regexp"
 
-	"github.com/spf13/cobra"
+	"github.com/urfave/cli/v3"
 )
 
 //go:embed all:template
 var frameworkTpl embed.FS
 
-func initCmd() *cobra.Command {
-	var name string
-	cmd := &cobra.Command{
-		Use:   "init",
-		Short: "create a new mder project",
-		Run: func(cmd *cobra.Command, args []string) {
-			if name == "" && len(args) == 0 {
-				logger.Error("folder name empty")
-				return
+func initCmd() *cli.Command {
+	return &cli.Command{
+		Name:  "init",
+		Usage: "create a new mder project",
+		Flags: []cli.Flag{
+			&cli.StringFlag{Name: "name", Usage: "name of the folder to create"},
+		},
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			name := cmd.String("name")
+			if name == "" && cmd.NArg() != 0 {
+				name = cmd.Args().First()
 			}
-			if name == "" && len(args) != 0 {
-				name = args[0]
-			}
-			var rule = fmt.Sprintf(`[A-Za-z0-9_]{%d}`, len([]rune(name)))
-			var reg = regexp.MustCompilePOSIX(rule)
-			if !reg.MatchString(name) {
-				logger.Error("folder name rule must be: " + rule)
-				return
-			}
-			if err := cloneTemplate(name); err != nil {
-				logger.Error("clone template repository failed", "reason", err)
-				return
-			}
-			logger.Info("create folder success", "folder", name)
+			return runInit(name)
 		},
 	}
+}
 
-	cmd.Flags().StringVar(&name, "name", "", "name of the folder to create")
-	return cmd
+func runInit(name string) error {
+	if name == "" {
+		return cli.Exit(errors.New("folder name empty"), exitUsage)
+	}
+	rule := fmt.Sprintf(`[A-Za-z0-9_]{%d}`, len([]rune(name)))
+	reg := regexp.MustCompilePOSIX(rule)
+	if !reg.MatchString(name) {
+		return cli.Exit(fmt.Errorf("folder name rule must be: %s", rule), exitUsage)
+	}
+	if err := cloneTemplate(name); err != nil {
+		return fmt.Errorf("clone template repository: %w", err)
+	}
+	logger.Info("create folder success", "folder", name)
+	return nil
 }

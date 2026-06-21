@@ -1,109 +1,117 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
+	"github.com/urfave/cli/v3"
 )
 
-func newCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "new",
-		Short: "new a post or page",
-	}
-
-	cmd.AddCommand(newPostCmd())
-	cmd.AddCommand(newPageCmd())
-
-	return cmd
-}
-
-func newPostCmd() *cobra.Command {
-	var name, catalog string
-	cmd := &cobra.Command{
-		Use:   "post",
-		Short: "new a post",
-		Run: func(cmd *cobra.Command, args []string) {
-			if name == "" && len(args) != 0 {
-				name = args[0]
-			}
-			var pureName = strings.ReplaceAll(name, ".md", "")
-			pureName = strings.ReplaceAll(pureName, "-", " ")
-			// 空格处理
-			name = strings.ReplaceAll(name, " ", "-")
-			if !strings.HasSuffix(name, ".md") {
-				name = name + ".md"
-			}
-			filename := fmt.Sprintf("posts/%s", name)
-			if catalog != "" {
-				sanitizedName := strings.ReplaceAll(name, "/", "-")
-				filename = fmt.Sprintf("posts/%s/%s", catalog, sanitizedName)
-			}
-			// 检测文件夹是否存在
-			dir := filepath.Dir(filename)
-			if !isExist(dir) {
-				if err := mkdir(dir); err != nil {
-					logger.Error("make directory failed", "reason", err)
-					return
-				}
-			}
-			f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, os.ModePerm)
-			if err != nil {
-				logger.Error("create file failed", "reason", err)
-				return
-			}
-			defer f.Close()
-			var data = fmt.Sprintf("---\ntitle: %s\ndate: %s\ncategories: %s\ntags:\n---", pureName, time.Now().Format("2006-01-02 15:04:05"), catalog)
-			if _, err := f.Write([]byte(data)); err != nil {
-				logger.Error("create file failed", "reason", err)
-				return
-			}
+func newCmd() *cli.Command {
+	return &cli.Command{
+		Name:  "new",
+		Usage: "new a post or page",
+		Commands: []*cli.Command{
+			newPostCmd(),
+			newPageCmd(),
 		},
 	}
-	cmd.Flags().StringVarP(&name, "name", "n", "uname.md", "Name of the post file to create")
-	cmd.Flags().StringVarP(&catalog, "catalog", "c", "develop", "Catalog of the post file to create")
-	return cmd
 }
 
-func newPageCmd() *cobra.Command {
-	var name string
-	cmd := &cobra.Command{
-		Use:   "page",
-		Short: "new a page",
-		Run: func(cmd *cobra.Command, args []string) {
-			if name == "" && len(args) != 0 {
-				name = args[0]
+func newPostCmd() *cli.Command {
+	return &cli.Command{
+		Name:  "post",
+		Usage: "new a post",
+		Flags: []cli.Flag{
+			&cli.StringFlag{Name: "name", Aliases: []string{"n"}, Value: "uname.md", Usage: "Name of the post file to create"},
+			&cli.StringFlag{Name: "catalog", Aliases: []string{"c"}, Value: "develop", Usage: "Catalog of the post file to create"},
+		},
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			name := cmd.String("name")
+			if name == "" && cmd.NArg() != 0 {
+				name = cmd.Args().First()
 			}
-			var pureName = strings.ReplaceAll(name, ".md", "")
-			if !strings.HasSuffix(name, ".md") {
-				name = name + ".md"
-			}
-			filename := fmt.Sprintf("pages/%s", name)
-			// 检测文件夹是否存在
-			dir := filepath.Dir(filename)
-			if !isExist(dir) {
-				if err := mkdir(dir); err != nil {
-					logger.Error("make directory failed", "reason", err)
-					return
-				}
-			}
-			f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, os.ModePerm)
-			if err != nil {
-				logger.Error("create file failed", "reason", err)
-				return
-			}
-			defer f.Close()
-			var data = fmt.Sprintf("---\ntitle: %s\ndate: %s\n---", pureName, time.Now().Format("2006-01-02 15:04:05"))
-			if _, err := f.Write([]byte(data)); err != nil {
-				logger.Error("create file failed", "reason", err)
-				return
-			}
+			return runNewPost(name, cmd.String("catalog"))
 		},
 	}
-	cmd.Flags().StringVar(&name, "name", "uname.md", "Name of the page file to create")
-	return cmd
+}
+
+func newPageCmd() *cli.Command {
+	return &cli.Command{
+		Name:  "page",
+		Usage: "new a page",
+		Flags: []cli.Flag{
+			&cli.StringFlag{Name: "name", Value: "uname.md", Usage: "Name of the page file to create"},
+		},
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			name := cmd.String("name")
+			if name == "" && cmd.NArg() != 0 {
+				name = cmd.Args().First()
+			}
+			return runNewPage(name)
+		},
+	}
+}
+
+func runNewPost(name, catalog string) error {
+	pureName := strings.ReplaceAll(name, ".md", "")
+	pureName = strings.ReplaceAll(pureName, "-", " ")
+	name = strings.ReplaceAll(name, " ", "-")
+	if !strings.HasSuffix(name, ".md") {
+		name += ".md"
+	}
+	filename := fmt.Sprintf("posts/%s", name)
+	if catalog != "" {
+		sanitizedName := strings.ReplaceAll(name, "/", "-")
+		filename = fmt.Sprintf("posts/%s/%s", catalog, sanitizedName)
+	}
+	if err := ensureParentDir(filename); err != nil {
+		return err
+	}
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("create post file: %w", err)
+	}
+	defer f.Close()
+	data := fmt.Sprintf("---\ntitle: %s\ndate: %s\ncategories: %s\ntags:\n---", pureName, time.Now().Format("2006-01-02 15:04:05"), catalog)
+	if _, err := f.Write([]byte(data)); err != nil {
+		return fmt.Errorf("write post file: %w", err)
+	}
+	return nil
+}
+
+func runNewPage(name string) error {
+	pureName := strings.ReplaceAll(name, ".md", "")
+	if !strings.HasSuffix(name, ".md") {
+		name += ".md"
+	}
+	filename := fmt.Sprintf("pages/%s", name)
+	if err := ensureParentDir(filename); err != nil {
+		return err
+	}
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("create page file: %w", err)
+	}
+	defer f.Close()
+	data := fmt.Sprintf("---\ntitle: %s\ndate: %s\n---", pureName, time.Now().Format("2006-01-02 15:04:05"))
+	if _, err := f.Write([]byte(data)); err != nil {
+		return fmt.Errorf("write page file: %w", err)
+	}
+	return nil
+}
+
+func ensureParentDir(filename string) error {
+	dir := filepath.Dir(filename)
+	if isExist(dir) {
+		return nil
+	}
+	if err := mkdir(dir); err != nil {
+		return fmt.Errorf("make directory: %w", err)
+	}
+	return nil
 }

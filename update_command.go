@@ -5,6 +5,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,7 +19,7 @@ import (
 	"time"
 
 	"github.com/minio/selfupdate"
-	"github.com/spf13/cobra"
+	"github.com/urfave/cli/v3"
 )
 
 const (
@@ -26,55 +27,54 @@ const (
 	updateUserAgent = "mder/self-update"
 )
 
-func updateCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "update",
-		Short:   "mder auto update",
-		Example: "mder update",
-		Aliases: []string{"u"},
-		Run: func(cmd *cobra.Command, args []string) {
-			executablePath, err := os.Executable()
-			if err != nil {
-				logger.Warn("detect executable path failed", "reason", err)
-			} else {
-				logger.Info("update target", "binary", executablePath)
-				if err := ensureUpdateTargetWritable(executablePath); err != nil {
-					logger.Error("update target is not writable", "binary", executablePath, "tmp", selfUpdateTempBinaryPath(executablePath), "reason", err)
-					return
-				}
-			}
-
-			release, err := getRepoLatestRelease()
-			if err != nil {
-				logger.Error("get latest release failed", "reason", err)
-				return
-			}
-
-			current := getCurrentVersion()
-			currentRevision := getCurrentRevision()
-			if isAlreadyLatest(current, currentRevision, release) {
-				logger.Info("already latest version", "version", current, "revision", currentRevision)
-				return
-			}
-
-			asset, err := selectReleaseAsset(release.Assets)
-			if err != nil {
-				logger.Error("select release asset failed", "reason", err, "version", release.TagName)
-				return
-			}
-
-			releaseCommit := releaseCommitForLog(release)
-			logger.Info("updating mder", "from", current, "to", release.TagName, "commit", releaseCommit, "asset", asset.Name)
-			if err := applyBinaryUpdate(asset.BrowserDownloadURL, asset.Name); err != nil {
-				logger.Error("update failed", "reason", err, "asset", asset.Name)
-				return
-			}
-
-			logger.Info("mder update success", "version", release.TagName, "commit", releaseCommit)
+func updateCmd() *cli.Command {
+	return &cli.Command{
+		Name:      "update",
+		Usage:     "mder auto update",
+		UsageText: "mder update",
+		Aliases:   []string{"u"},
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			return runUpdate()
 		},
 	}
+}
 
-	return cmd
+func runUpdate() error {
+	executablePath, err := os.Executable()
+	if err != nil {
+		logger.Warn("detect executable path failed", "reason", err)
+	} else {
+		logger.Info("update target", "binary", executablePath)
+		if err := ensureUpdateTargetWritable(executablePath); err != nil {
+			return fmt.Errorf("update target is not writable: %w", err)
+		}
+	}
+
+	release, err := getRepoLatestRelease()
+	if err != nil {
+		return fmt.Errorf("get latest release: %w", err)
+	}
+
+	current := getCurrentVersion()
+	currentRevision := getCurrentRevision()
+	if isAlreadyLatest(current, currentRevision, release) {
+		logger.Info("already latest version", "version", current, "revision", currentRevision)
+		return nil
+	}
+
+	asset, err := selectReleaseAsset(release.Assets)
+	if err != nil {
+		return fmt.Errorf("select release asset for %s: %w", release.TagName, err)
+	}
+
+	releaseCommit := releaseCommitForLog(release)
+	logger.Info("updating mder", "from", current, "to", release.TagName, "commit", releaseCommit, "asset", asset.Name)
+	if err := applyBinaryUpdate(asset.BrowserDownloadURL, asset.Name); err != nil {
+		return fmt.Errorf("update from asset %s: %w", asset.Name, err)
+	}
+
+	logger.Info("mder update success", "version", release.TagName, "commit", releaseCommit)
+	return nil
 }
 
 type RepoRelease struct {

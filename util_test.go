@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 )
@@ -9,5 +8,7 @@ import (
 func TestTrim(t *testing.T) {
 	var a = "/tmp/blog/"
 	a = strings.TrimSuffix(a, "/")
-	fmt.Println(a)
+	if a != "/tmp/blog" {
+		t.Fatalf("trimmed path = %q, want /tmp/blog", a)
+	}
 }

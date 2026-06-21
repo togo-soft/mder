@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,7 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/radovskyb/watcher"
-	"github.com/spf13/cobra"
+	"github.com/urfave/cli/v3"
 )
 
 // FileServer conveniently sets up a http.FileServer handler to serve
@@ -34,80 +36,75 @@ func FileServer(r chi.Router, path string, root http.FileSystem) {
 	})
 }
 
-func serveCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "serve",
-		Short:   "run a serve locally",
+func serveCmd() *cli.Command {
+	return &cli.Command{
+		Name:    "serve",
+		Usage:   "run a serve locally",
 		Aliases: []string{"s"},
-		Run: func(cmd *cobra.Command, args []string) {
-			w := watcher.New()
-			w.SetMaxEvents(1)
-			w.FilterOps(watcher.Rename, watcher.Move, watcher.Write, watcher.Create)
-			if err := w.AddRecursive("./data"); err != nil {
-				logger.Error("watch directory data failed", "reason", err)
-				return
-			}
-			if err := w.AddRecursive("./posts"); err != nil {
-				logger.Error("watch directory posts failed", "reason", err)
-				return
-			}
-			if err := w.AddRecursive("./pages"); err != nil {
-				logger.Error("watch directory pages failed", "reason", err)
-				return
-			}
-			if err := w.AddRecursive("./themes"); err != nil {
-				logger.Error("watch directory pages failed", "reason", err)
-				return
-			}
-			if err := w.Add("config.yaml"); err != nil {
-				logger.Error("watch file failed", "reason", err)
-				return
-			}
-			// start http server
-			r := chi.NewRouter()
-			workDir, _ := os.Getwd()
-			filesDir := http.Dir(filepath.Join(workDir, "dist"))
-			FileServer(r, "/", filesDir)
-
-			server := http.Server{
-				Addr:    ":8666",
-				Handler: r,
-			}
-			go func() {
-				if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-					logger.Error("listen server failed", "reason", err)
-				}
-			}()
-
-			go func() {
-				for {
-					select {
-					case event := <-w.Event:
-						// 文件变更 更新文件
-						if err := generateCmd().Execute(); err != nil {
-							logger.Error("re generate website failed", "reason", err)
-							return
-						}
-						logger.Info("file change", "event", event.String())
-					case err := <-w.Error:
-						logger.Error("watch file failed", "reason", err)
-					case <-w.Closed:
-						return
-					}
-				}
-			}()
-			// 先生成一次
-			if err := generateCmd().Execute(); err != nil {
-				logger.Error("generate website failed", "reason", err)
-				return
-			}
-			// 3秒一次
-			logger.Info("http://127.0.0.1:8666")
-			if err := w.Start(time.Second * 3); err != nil {
-				logger.Error("watch file failed", "reason", err)
-				return
-			}
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			return runServe()
 		},
 	}
-	return cmd
+}
+
+func runServe() error {
+	w := watcher.New()
+	w.SetMaxEvents(1)
+	w.FilterOps(watcher.Rename, watcher.Move, watcher.Write, watcher.Create)
+	if err := w.AddRecursive("./data"); err != nil {
+		return fmt.Errorf("watch directory data: %w", err)
+	}
+	if err := w.AddRecursive("./posts"); err != nil {
+		return fmt.Errorf("watch directory posts: %w", err)
+	}
+	if err := w.AddRecursive("./pages"); err != nil {
+		return fmt.Errorf("watch directory pages: %w", err)
+	}
+	if err := w.AddRecursive("./themes"); err != nil {
+		return fmt.Errorf("watch directory themes: %w", err)
+	}
+	if err := w.Add("config.yaml"); err != nil {
+		return fmt.Errorf("watch config file: %w", err)
+	}
+
+	r := chi.NewRouter()
+	workDir, _ := os.Getwd()
+	filesDir := http.Dir(filepath.Join(workDir, "dist"))
+	FileServer(r, "/", filesDir)
+
+	server := http.Server{
+		Addr:    ":8666",
+		Handler: r,
+	}
+	go func() {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Error("listen server failed", "reason", err)
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case event := <-w.Event:
+				if err := runGenerate("."); err != nil {
+					logger.Error("re generate website failed", "reason", err)
+					return
+				}
+				logger.Info("file change", "event", event.String())
+			case err := <-w.Error:
+				logger.Error("watch file failed", "reason", err)
+			case <-w.Closed:
+				return
+			}
+		}
+	}()
+
+	if err := runGenerate("."); err != nil {
+		return fmt.Errorf("generate website: %w", err)
+	}
+	logger.Info("http://127.0.0.1:8666")
+	if err := w.Start(time.Second * 3); err != nil {
+		return fmt.Errorf("watch file: %w", err)
+	}
+	return nil
 }
