@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -41,13 +42,20 @@ func serveCmd() *cli.Command {
 		Name:    "serve",
 		Usage:   "run a serve locally",
 		Aliases: []string{"s"},
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  "host",
+				Value: "",
+				Usage: "listen host address (e.g. 0.0.0.0, ::, 127.0.0.1), empty for all interfaces",
+			},
+		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			return runServe()
+			return runServe(cmd.String("host"))
 		},
 	}
 }
 
-func runServe() error {
+func runServe(host string) error {
 	w := watcher.New()
 	w.SetMaxEvents(1)
 	w.FilterOps(watcher.Rename, watcher.Move, watcher.Write, watcher.Create)
@@ -72,8 +80,9 @@ func runServe() error {
 	filesDir := http.Dir(filepath.Join(workDir, "dist"))
 	FileServer(r, "/", filesDir)
 
+	addr := net.JoinHostPort(host, "8666")
 	server := http.Server{
-		Addr:    ":8666",
+		Addr:    addr,
 		Handler: r,
 	}
 	go func() {
@@ -102,7 +111,7 @@ func runServe() error {
 	if err := runGenerate("."); err != nil {
 		return fmt.Errorf("generate website: %w", err)
 	}
-	logger.Info("http://127.0.0.1:8666")
+	logger.Info("http://" + addr)
 	if err := w.Start(time.Second * 3); err != nil {
 		return fmt.Errorf("watch file: %w", err)
 	}
